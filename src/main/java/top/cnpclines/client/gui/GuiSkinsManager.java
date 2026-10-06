@@ -63,6 +63,8 @@ public class GuiSkinsManager extends Screen {
     private EntryTreeView tree;
     private TextureEntryList list;
     private EditBox nameBox;
+    private EditBox searchBox;
+    private SearchResultView results;
     private Button deleteButton;
 
     private int mode = MODE_NONE;
@@ -116,10 +118,22 @@ public class GuiSkinsManager extends Screen {
                 }
             });
             EntryTreeView.openDefault(this.tree, MAIN_PATHS[this.tab], ROOT_PATHS[this.tab]);
+            this.results = new SearchResultView(this.font);
+            this.results.setListener(this::locate);
+            this.results.setSkinThumbRenderer(parent::drawSkinThumb);
         }
-        this.tree.setBounds(this.guiLeft + 6, this.guiTop + 20, 108, 156);
-        this.list.setBounds(this.guiLeft + 120, this.guiTop + 20, 190, 156);
+        this.tree.setBounds(this.guiLeft + 6, this.guiTop + 38, 108, 138);
+        this.list.setBounds(this.guiLeft + 120, this.guiTop + 38, 190, 138);
+        this.results.setBounds(this.guiLeft + 6, this.guiTop + 38, 304, 138);
         refreshList();
+
+        this.searchBox = new EditBox(this.font, this.guiLeft + 6, this.guiTop + 20, 304, 16,
+            Component.literal(""));
+        this.searchBox.setMaxLength(64);
+        this.searchBox.setHint(Component.literal("搜索皮肤：文件名 / 拼音 / 首字母（如 hs → 红色）"));
+        this.searchBox.setResponder(value -> refreshSearch());
+        this.addRenderableWidget(this.searchBox);
+        refreshSearch();
 
         Button create = Button.builder(Component.literal("新建文件夹"), button -> beginCreate())
             .bounds(this.guiLeft + 316, this.guiTop + 20, 98, 18).build();
@@ -180,8 +194,12 @@ public class GuiSkinsManager extends Screen {
         drawTabsBack(graphics);
         drawPanel(graphics);
         drawTabsFront(graphics);
-        this.tree.render(graphics, mouseX, mouseY);
-        this.list.render(graphics, mouseX, mouseY);
+        if (isSearchActive()) {
+            this.results.render(graphics, mouseX, mouseY);
+        } else {
+            this.tree.render(graphics, mouseX, mouseY);
+            this.list.render(graphics, mouseX, mouseY);
+        }
         drawControls(graphics);
         super.render(graphics, mouseX, mouseY, partialTick);
     }
@@ -199,8 +217,12 @@ public class GuiSkinsManager extends Screen {
                 disarmDelete();
             }
         }
-        if (this.tree.mouseClicked(mouseX, mouseY, button)) return true;
-        if (this.list.mouseClicked(mouseX, mouseY, button)) return true;
+        if (isSearchActive()) {
+            if (this.results.mouseClicked(mouseX, mouseY, button)) return true;
+        } else {
+            if (this.tree.mouseClicked(mouseX, mouseY, button)) return true;
+            if (this.list.mouseClicked(mouseX, mouseY, button)) return true;
+        }
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
@@ -218,8 +240,12 @@ public class GuiSkinsManager extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        if (this.tree.mouseScrolled(mouseX, mouseY, scrollY)) return true;
-        if (this.list.mouseScrolled(mouseX, mouseY, scrollY)) return true;
+        if (isSearchActive()) {
+            if (this.results.mouseScrolled(mouseX, mouseY, scrollY)) return true;
+        } else {
+            if (this.tree.mouseScrolled(mouseX, mouseY, scrollY)) return true;
+            if (this.list.mouseScrolled(mouseX, mouseY, scrollY)) return true;
+        }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
@@ -289,16 +315,83 @@ public class GuiSkinsManager extends Screen {
         disarmDelete();
         EntryTreeView.openDefault(this.tree, MAIN_PATHS[this.tab], ROOT_PATHS[this.tab]);
         refreshList();
+        refreshSearch();
     }
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (this.searchBox != null && this.searchBox.isFocused()) {
+            if (keyCode == 257 || keyCode == 335) {
+                SearchResultView.Row row = this.results.first();
+                if (row != null) {
+                    locate(row.location(), row.dirId());
+                }
+                return true;
+            }
+            if (keyCode == 256 && isSearchActive()) {
+                clearSearch();
+                return true;
+            }
+        }
         if (this.nameBox != null && this.nameBox.isFocused()
             && this.mode != MODE_NONE && (keyCode == 257 || keyCode == 335)) {
             confirmName();
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    private boolean isSearchActive() {
+        return this.searchBox != null && !this.searchBox.getValue().trim().isEmpty()
+            && this.results != null;
+    }
+
+    private void refreshSearch() {
+        if (this.results == null) {
+            return;
+        }
+        String q = this.searchBox == null ? "" : this.searchBox.getValue().trim();
+        String scope = searchScopeId();
+        this.results.setScope(EntryTreeView.displayPath(scope));
+        this.results.setPreviewMode(this.tab);
+        this.results.setHighlight(this.parent.currentTextureFor(this.tab));
+        this.results.setResults(q.isEmpty() ? java.util.List.of() : SkinSearch.query(q, scope));
+    }
+
+    private String searchScopeId() {
+        String dir = this.tree.displayDir();
+        String parent = EntryTreeView.parentOf(dir);
+        if (parent == null) {
+            return dir;
+        }
+        String parentPath = EntryTreeView.pathOf(parent);
+        if (parentPath == null || parentPath.isEmpty()) {
+            return dir;
+        }
+        return parent;
+    }
+
+    private void clearSearch() {
+        this.searchBox.setValue("");
+        this.searchBox.setFocused(false);
+    }
+
+    private void locate(ResourceLocation location, String dirId) {
+        int nextTab = SkinSearch.tabForPath(dirId);
+        if (nextTab >= 0 && nextTab != this.tab) {
+            this.tab = nextTab;
+            this.mode = MODE_NONE;
+            this.targetId = null;
+            disarmDelete();
+        }
+        this.searchBox.setValue("");
+        this.searchBox.setFocused(false);
+        this.tree.configure(MAIN_PATHS[this.tab], dirId);
+        this.tree.restoreSelection(dirId);
+        refreshList();
+        this.list.setSelected(location);
+        this.status = "已定位 " + EntryTreeView.displayPath(dirId);
+        playClick();
     }
 
     private boolean ensureOwnTarget() {
@@ -606,8 +699,8 @@ public class GuiSkinsManager extends Screen {
         graphics.fill(tx, ty, tx + 1, this.guiTop + 1, COL_LIGHT);
         graphics.fill(tx, ty, tx + tw, ty + 1, COL_LIGHT);
         graphics.fill(tx + tw - 1, ty, tx + tw, this.guiTop + 1, COL_DARK);
-        graphics.drawString(this.font, TAB_NAMES[i], tx + 26, ty + 4, COL_TEXT, false);
-        graphics.blit(TAB_ICONS[i], tx + 8, ty + 1, 16, 16,
+        graphics.drawString(this.font, TAB_NAMES[i], tx + 26, ty + 4, 0xFF000000, false);
+        graphics.blit(TabIcons.black(TAB_ICONS[i]), tx + 8, ty + 1, 16, 16,
             0.0F, 0.0F, 16, 16, 16, 16);
     }
 

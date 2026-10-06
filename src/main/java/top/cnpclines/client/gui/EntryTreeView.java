@@ -147,7 +147,7 @@ public class EntryTreeView {
             (int) Math.ceil((this.scroll + contentH) / (float) ROW_H) + 1);
         for (int i = first; i < last; i++) {
             int rowY = contentY + (int) (i * ROW_H - this.scroll);
-            if (rowY >= contentY + contentH) {
+            if (rowY + ROW_H > contentY + contentH) {
                 break;
             }
             int rowBottom = Math.min(rowY + ROW_H, contentY + contentH);
@@ -265,7 +265,12 @@ public class EntryTreeView {
         if (offset < 0) {
             return -1;
         }
-        return offset / ROW_H;
+        int index = offset / ROW_H;
+        int rowTop = (int) (index * ROW_H - this.scroll);
+        if (rowTop < 0 || rowTop + ROW_H > this.h - 2) {
+            return -1;
+        }
+        return index;
     }
 
     private float maxScroll() {

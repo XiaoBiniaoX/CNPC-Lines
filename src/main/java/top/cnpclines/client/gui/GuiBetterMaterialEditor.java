@@ -32,7 +32,6 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
     private static final int COL_SLOT_EDGE = 0xFF373737;
 
     private static final String[] TAB_NAMES = {"材质", "披风", "附加材质"};
-    private static final String MANAGER_TAB = "Skins管理器";
     private static final String[] MAIN_PATHS = {
         "textures/entity/humanmale/",
         "textures/cloak/",
@@ -47,7 +46,6 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
         ResourceLocation.fromNamespaceAndPath("cnpclines", "textures/overlay/message/icons/skins.png"),
         ResourceLocation.fromNamespaceAndPath("cnpclines", "textures/overlay/message/icons/cloak.png"),
         ResourceLocation.fromNamespaceAndPath("cnpclines", "textures/overlay/message/icons/overlays.png"),
-        ResourceLocation.fromNamespaceAndPath("cnpclines", "textures/overlay/message/icons/management.png"),
     };
 
     private final GuiNpcDisplay parent;
@@ -73,6 +71,8 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
     private TextureEntryList list;
     private GuiSliderNop slider;
     private EditBox textureBox;
+    private EditBox searchBox;
+    private SearchResultView results;
     private String boxMessage = "";
 
     public GuiBetterMaterialEditor(GuiNpcDisplay parent) {
@@ -116,9 +116,21 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
                 public void onDelete(ResourceLocation location) {
                 }
             });
+            this.results = new SearchResultView(this.font);
+            this.results.setListener(this::locate);
+            this.results.setSkinThumbRenderer(this::drawSkinThumb);
         }
-        this.tree.setBounds(this.guiLeft + 6, this.guiTop + 20, 108, 156);
-        this.list.setBounds(this.guiLeft + 120, this.guiTop + 20, 190, 156);
+        this.tree.setBounds(this.guiLeft + 6, this.guiTop + 38, 108, 138);
+        this.list.setBounds(this.guiLeft + 120, this.guiTop + 38, 190, 138);
+        this.results.setBounds(this.guiLeft + 6, this.guiTop + 38, 304, 138);
+
+        this.searchBox = new EditBox(this.font, this.guiLeft + 6, this.guiTop + 20, 304, 16,
+            Component.literal(""));
+        this.searchBox.setMaxLength(64);
+        this.searchBox.setHint(Component.literal("搜索皮肤：文件名 / 拼音 / 首字母（如 hs → 红色）"));
+        this.searchBox.setResponder(value -> refreshSearch());
+        this.addRenderableWidget(this.searchBox);
+        refreshSearch();
 
         this.textureBox = new EditBox(this.font, this.guiLeft + 40, this.guiTop + 183, 270, 16,
             Component.literal(""));
@@ -138,6 +150,8 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
             .bounds(this.guiLeft + 284, this.guiTop + 206, 64, 20).build());
         this.addRenderableWidget(Button.builder(Component.literal("取消"), button -> cancelAndReturn())
             .bounds(this.guiLeft + 350, this.guiTop + 206, 64, 20).build());
+        this.addRenderableWidget(Button.builder(Component.literal("Skins管理器"), button -> openManager())
+            .bounds(this.guiLeft + 8, this.guiTop + 206, 94, 20).build());
 
         this.slider = new GuiSliderNop(this, 0, this.guiLeft + 318, this.guiTop + 124, 94, 20,
             this.rotation / 360f);
@@ -164,8 +178,12 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
         drawTabsBack(graphics);
         drawPanel(graphics);
         drawTabsFront(graphics);
-        this.tree.render(graphics, mouseX, mouseY);
-        this.list.render(graphics, mouseX, mouseY);
+        if (isSearchActive()) {
+            this.results.render(graphics, mouseX, mouseY);
+        } else {
+            this.tree.render(graphics, mouseX, mouseY);
+            this.list.render(graphics, mouseX, mouseY);
+        }
         drawPreview(graphics, mouseX, mouseY);
         super.render(graphics, mouseX, mouseY, partialTick);
     }
@@ -175,16 +193,16 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
         if (button == 0) {
             int index = tabAt(mouseX, mouseY);
             if (index >= 0) {
-                if (index < TAB_NAMES.length) {
-                    switchTab(index);
-                } else {
-                    openManager();
-                }
+                switchTab(index);
                 return true;
             }
         }
-        if (this.tree.mouseClicked(mouseX, mouseY, button)) return true;
-        if (this.list.mouseClicked(mouseX, mouseY, button)) return true;
+        if (isSearchActive()) {
+            if (this.results.mouseClicked(mouseX, mouseY, button)) return true;
+        } else {
+            if (this.tree.mouseClicked(mouseX, mouseY, button)) return true;
+            if (this.list.mouseClicked(mouseX, mouseY, button)) return true;
+        }
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
@@ -202,8 +220,12 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        if (this.tree.mouseScrolled(mouseX, mouseY, scrollY)) return true;
-        if (this.list.mouseScrolled(mouseX, mouseY, scrollY)) return true;
+        if (isSearchActive()) {
+            if (this.results.mouseScrolled(mouseX, mouseY, scrollY)) return true;
+        } else {
+            if (this.tree.mouseScrolled(mouseX, mouseY, scrollY)) return true;
+            if (this.list.mouseScrolled(mouseX, mouseY, scrollY)) return true;
+        }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
@@ -223,12 +245,74 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (this.searchBox != null && this.searchBox.isFocused()) {
+            if (keyCode == 257 || keyCode == 335) {
+                SearchResultView.Row row = this.results.first();
+                if (row != null) {
+                    locate(row.location(), row.dirId());
+                }
+                return true;
+            }
+            if (keyCode == 256 && isSearchActive()) {
+                clearSearch();
+                return true;
+            }
+        }
         if (this.textureBox != null && this.textureBox.isFocused()
             && (keyCode == 257 || keyCode == 335)) {
             applyBoxValue();
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    private boolean isSearchActive() {
+        return this.searchBox != null && !this.searchBox.getValue().trim().isEmpty()
+            && this.results != null;
+    }
+
+    private void refreshSearch() {
+        if (this.results == null) {
+            return;
+        }
+        String q = this.searchBox == null ? "" : this.searchBox.getValue().trim();
+        String scope = searchScopeId();
+        this.results.setScope(EntryTreeView.displayPath(scope));
+        this.results.setPreviewMode(this.tab);
+        this.results.setHighlight(currentTexture());
+        this.results.setResults(q.isEmpty() ? java.util.List.of() : SkinSearch.query(q, scope));
+    }
+
+    private String searchScopeId() {
+        String dir = this.tree.displayDir();
+        String parent = EntryTreeView.parentOf(dir);
+        if (parent == null) {
+            return dir;
+        }
+        String parentPath = EntryTreeView.pathOf(parent);
+        if (parentPath == null || parentPath.isEmpty()) {
+            return dir;
+        }
+        return parent;
+    }
+
+    private void clearSearch() {
+        this.searchBox.setValue("");
+        this.searchBox.setFocused(false);
+    }
+
+    private void locate(ResourceLocation location, String dirId) {
+        int nextTab = SkinSearch.tabForPath(dirId);
+        if (nextTab >= 0) {
+            this.tab = nextTab;
+        }
+        this.searchBox.setValue("");
+        this.searchBox.setFocused(false);
+        this.tree.configure(MAIN_PATHS[this.tab], dirId);
+        this.tree.restoreSelection(dirId);
+        refreshList();
+        this.list.setSelected(location);
+        this.boxMessage = "已定位: " + EntryTreeView.displayPath(dirId);
     }
 
     private void applyBoxValue() {
@@ -352,6 +436,7 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
         if (nextTab == this.tab) return;
         this.tab = nextTab;
         resetView();
+        refreshSearch();
     }
 
     private void resetView() {
@@ -525,7 +610,7 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
             int tw = rects[i][2];
             graphics.fill(tx, ty, tx + tw, this.guiTop, COL_TAB_OFF);
             graphics.fill(tx, ty, tx + tw, ty + 1, COL_LIGHT);
-            graphics.drawString(this.font, tabLabel(i), tx + 26, this.guiTop - 4,
+            graphics.drawString(this.font, TAB_NAMES[i], tx + 26, this.guiTop - 4,
                 0xFFFFFFFF, false);
             graphics.blit(TAB_ICONS[i], tx + 8, this.guiTop - 8, 16, 16,
                 0.0F, 0.0F, 16, 16, 16, 16);
@@ -542,27 +627,21 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
         graphics.fill(tx, ty, tx + 1, this.guiTop + 1, COL_LIGHT);
         graphics.fill(tx, ty, tx + tw, ty + 1, COL_LIGHT);
         graphics.fill(tx + tw - 1, ty, tx + tw, this.guiTop + 1, COL_DARK);
-        graphics.drawString(this.font, tabLabel(i), tx + 26, ty + 4, COL_TEXT, false);
-        graphics.blit(TAB_ICONS[i], tx + 8, ty + 1, 16, 16,
+        graphics.drawString(this.font, TAB_NAMES[i], tx + 26, ty + 4, 0xFF000000, false);
+        graphics.blit(TabIcons.black(TAB_ICONS[i]), tx + 8, ty + 1, 16, 16,
             0.0F, 0.0F, 16, 16, 16, 16);
-    }
-
-    private String tabLabel(int i) {
-        return i < TAB_NAMES.length ? TAB_NAMES[i] : MANAGER_TAB;
     }
 
     private int[][] tabRects() {
         int top = Math.max(0, this.guiTop - TAB_H);
         int height = this.guiTop + 1 - top;
-        int[][] rects = new int[TAB_NAMES.length + 1][4];
+        int[][] rects = new int[TAB_NAMES.length][4];
         int tx = this.guiLeft + 6;
         for (int i = 0; i < TAB_NAMES.length; i++) {
             int tw = tabWidth(TAB_NAMES[i]);
             rects[i] = new int[]{tx, top, tw, height};
             tx += tw + 2;
         }
-        int sw = tabWidth(MANAGER_TAB);
-        rects[TAB_NAMES.length] = new int[]{this.guiLeft + PANEL_W - 6 - sw, top, sw, height};
         return rects;
     }
 

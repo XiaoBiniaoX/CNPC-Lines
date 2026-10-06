@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.security.CodeSource;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -41,6 +42,62 @@ public final class ResourceIndex {
     private static final Set<String> REGISTERED = new HashSet<>();
     private static final Pattern ALIAS_PATTERN = Pattern.compile("_u[0-9a-f]{2}_");
     private static final String HEX = "0123456789abcdef";
+    static final Comparator<String> NATURAL_ORDER = (a, b) -> {
+        int la = a.length();
+        int lb = b.length();
+        int i = 0;
+        int j = 0;
+        while (i < la && j < lb) {
+            char ca = a.charAt(i);
+            char cb = b.charAt(j);
+            boolean da = ca >= '0' && ca <= '9';
+            boolean db = cb >= '0' && cb <= '9';
+            if (da && db) {
+                int zs = i;
+                int ze = j;
+                while (i < la && a.charAt(i) == '0') {
+                    i++;
+                }
+                while (j < lb && b.charAt(j) == '0') {
+                    j++;
+                }
+                int ns = i;
+                int ne = j;
+                while (i < la && a.charAt(i) >= '0' && a.charAt(i) <= '9') {
+                    i++;
+                }
+                while (j < lb && b.charAt(j) >= '0' && b.charAt(j) <= '9') {
+                    j++;
+                }
+                int na = i - ns;
+                int nb = j - ne;
+                if (na != nb) {
+                    return na - nb;
+                }
+                for (int k = 0; k < na; k++) {
+                    int diff = a.charAt(ns + k) - b.charAt(ne + k);
+                    if (diff != 0) {
+                        return diff;
+                    }
+                }
+                if (i - zs != j - ze) {
+                    return (i - zs) - (j - ze);
+                }
+                continue;
+            }
+            if (da != db) {
+                return da ? -1 : 1;
+            }
+            char ua = Character.toUpperCase(ca);
+            char ub = Character.toUpperCase(cb);
+            if (ua != ub) {
+                return ua - ub;
+            }
+            i++;
+            j++;
+        }
+        return (la - i) - (lb - j);
+    };
     private static boolean loaded;
     private static int packCount = -1;
 
@@ -518,14 +575,15 @@ public final class ResourceIndex {
             }
             result.add(rest.substring(0, slash));
         }
+        result.sort(NATURAL_ORDER);
         return result;
     }
 
     public static List<ResourceLocation> filesIn(String namespace, String dir) {
-        List<ResourceLocation> result = new ArrayList<>();
+        List<Map.Entry<String, ResourceLocation>> matched = new ArrayList<>();
         TreeMap<String, ResourceLocation> all = FILES.get(namespace);
         if (all == null || dir == null) {
-            return result;
+            return new ArrayList<>();
         }
         for (Map.Entry<String, ResourceLocation> entry : all.entrySet()) {
             String path = entry.getKey();
@@ -536,8 +594,26 @@ public final class ResourceIndex {
             if (rest.isEmpty() || rest.indexOf('/') >= 0) {
                 continue;
             }
+            matched.add(entry);
+        }
+        matched.sort((a, b) -> NATURAL_ORDER.compare(a.getKey(), b.getKey()));
+        List<ResourceLocation> result = new ArrayList<>(matched.size());
+        for (Map.Entry<String, ResourceLocation> entry : matched) {
             result.add(entry.getValue());
         }
         return result;
+    }
+
+    public record IndexedFile(String namespace, String path, ResourceLocation location) {
+    }
+
+    public static List<IndexedFile> allFiles() {
+        List<IndexedFile> list = new ArrayList<>();
+        for (Map.Entry<String, TreeMap<String, ResourceLocation>> nsEntry : FILES.entrySet()) {
+            for (Map.Entry<String, ResourceLocation> file : nsEntry.getValue().entrySet()) {
+                list.add(new IndexedFile(nsEntry.getKey(), file.getKey(), file.getValue()));
+            }
+        }
+        return list;
     }
 }

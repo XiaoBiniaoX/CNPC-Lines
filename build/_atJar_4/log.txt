@@ -1,7 +1,0 @@
-Java Launcher: C:\BinApps\Java\jdk-17.0.11\bin\java.exe
-Arguments: '--inJar, C:\Users\ASUS\Desktop\Mod开发\CNPC lines\1.20.1Forge\build\fg_cache\net\minecraftforge\forge\1.20.1-47.4.6\forge-1.20.1-47.4.6-injected.jar, --outJar, C:\Users\ASUS\Desktop\Mod开发\CNPC lines\1.20.1Forge\build\fg_cache\net\minecraftforge\forge\1.20.1-47.4.6_mapped_official_1.20.1\forge-1.20.1-47.4.6_mapped_official_1.20.1.jar, --logFile, accesstransform.log, --atFile, C:\Users\ASUS\Desktop\Mod开发\CNPC lines\1.20.1Forge\src\main\resources\META-INF\accesstransformer.cfg, --atFile, C:\Users\ASUS\Desktop\Mod开发\CNPC lines\1.20.1Forge\build\_atJar_4\parent_at.cfg'
-Classpath:
- - C:\Users\ASUS\.gradle\caches\forge_gradle\maven_downloader\net\minecraftforge\accesstransformers\8.2.14\accesstransformers-8.2.14-fatjar.jar
-Working directory: C:\Users\ASUS\Desktop\Mod开发\CNPC lines\1.20.1Forge\build\_atJar_4
-Main class: net.minecraftforge.accesstransformer.TransformerProcessor
-====================================

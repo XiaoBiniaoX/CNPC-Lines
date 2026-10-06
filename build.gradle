@@ -1,0 +1,109 @@
+buildscript {
+    repositories {
+        maven { url = 'https://files.minecraftforge.net/maven' }
+        maven { url = 'https://repo.spongepowered.org/maven' }
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'net.minecraftforge.gradle:ForgeGradle:3.+'
+        classpath 'org.spongepowered:mixingradle:0.7-SNAPSHOT'
+    }
+}
+
+apply plugin: 'net.minecraftforge.gradle'
+// Only edit below this line, the above code adds and enables the necessary things for Forge to be setup.
+apply plugin: 'org.spongepowered.mixin'
+apply plugin: 'eclipse'
+
+version = mod_version
+group = mod_group
+archivesBaseName = mod_jar_name
+
+sourceCompatibility = targetCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = '1.8' // Need this here so eclipse task generates correctly.
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+minecraft {
+    mappings channel: mappings_channel, version: mappings_version
+    // makeObfSourceJar = false // an Srg named sources jar is made by default. uncomment this to disable.
+    // accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
+
+    runs {
+        client {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'SCAN,REGISTRIES,REGISTRYDUMP'
+            property 'forge.logging.console.level', 'debug'
+            arg '-torg.spongepowered.asm.launch.MixinTweaker'
+        }
+
+        server {
+            property 'forge.logging.markers', 'SCAN,REGISTRIES,REGISTRYDUMP'
+            property 'forge.logging.console.level', 'debug'
+            arg '-torg.spongepowered.asm.launch.MixinTweaker'
+        }
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven { url = 'https://repo.spongepowered.org/maven' }
+}
+
+dependencies {
+    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+
+    // Mixin 编译期（AP + refmap 由 sponge mixin 及其 asm 传递依赖提供，不打进 jar）
+    compileOnly 'org.spongepowered:mixin:0.8.3-SNAPSHOT'
+    annotationProcessor 'org.spongepowered:mixin:0.8.3-SNAPSHOT'
+    annotationProcessor 'com.google.code.gson:gson:2.8.0'
+    annotationProcessor 'com.google.guava:guava:21.0'
+    annotationProcessor 'commons-io:commons-io:2.4'
+    annotationProcessor 'org.ow2.asm:asm:9.2'
+    annotationProcessor 'org.ow2.asm:asm-tree:9.2'
+    annotationProcessor 'org.ow2.asm:asm-commons:9.2'
+    annotationProcessor 'org.ow2.asm:asm-analysis:9.2'
+    annotationProcessor 'org.ow2.asm:asm-util:9.2'
+
+    // MixinBooter API（@MixinLoader / ILateMixinLoader）仅编译期；运行期由游戏包内 !mixinbooter-10.7.jar 提供
+    compileOnly files('libs/!mixinbooter-10.7.jar')
+
+    // CustomNPCs 1.12.2：mixins 目标类（编译期）+ 运行前置
+    compileOnly files('libs/[自定义NPC] CustomNPCs_1.12.2-(05Jul20).jar')
+    runtimeOnly files('libs/[自定义NPC] CustomNPCs_1.12.2-(05Jul20).jar')
+    runtimeOnly files('libs/!mixinbooter-10.7.jar')
+}
+
+processResources {
+    inputs.property 'version', project.version
+    inputs.property 'mcversion', minecraft_version
+    filteringCharset = 'UTF-8'
+
+    from(sourceSets.main.resources.srcDirs) {
+        include 'mcmod.info'
+
+        expand 'mod_id': mod_id, 'mod_name': mod_name, 'version': project.version,
+                'mcversion': minecraft_version, 'mod_description': mod_description,
+                'mod_author': mod_author
+    }
+
+    from(sourceSets.main.resources.srcDirs) {
+        exclude 'mcmod.info'
+    }
+}
+
+sourceSets {
+    main {
+        refMap = mod_mixin_refmap.replace('${mod_id}', mod_id)
+    }
+}
+
+jar {
+    manifest.attributes(
+            'ForceLoadAsMod': 'true',
+            'FMLCorePluginContainsFMLMod': 'true'
+    )
+}
+
+jar.finalizedBy('reobfJar')

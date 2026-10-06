@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "top.cnpclines.mixin",
+  "refmap": "refmap.cnpclines.json",
+  "compatibilityLevel": "JAVA_8",
+  "mixins": [],
+  "client": [
+    "client.GuiNpcDisplayMixin",
+    "client.PacketHandlerClientMixin"
+  ],
+  "server": []
+}

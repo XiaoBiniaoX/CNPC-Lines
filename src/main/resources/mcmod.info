@@ -1,0 +1,16 @@
+[
+{
+  "modid": "${mod_id}",
+  "name": "${mod_name}",
+  "description": "Custom NPCs 消息浮层移植：/binnpclines open CustomMessageOverlay 指令与 HUD 消息浮层 UI",
+  "version": "${version}",
+  "mcversion": "${mcversion}",
+  "url": "",
+  "updateUrl": "",
+  "authorList": ${mod_author},
+  "credits": "",
+  "logoFile": "icons.png",
+  "screenshots": [],
+  "dependencies": []
+}
+]

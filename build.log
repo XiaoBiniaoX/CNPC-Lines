@@ -1,0 +1,36 @@
+Reusing configuration cache.
+> Task :jarJar NO-SOURCE
+> Task :processTestResources NO-SOURCE
+> Task :generateModMetadata UP-TO-DATE
+> Task :createMinecraftArtifacts UP-TO-DATE
+> Task :processResources
+
+> Task :compileJava
+C:\Users\ASUS\Desktop\Mod开发\CNPC lines\1.21.1NeoForge\src\main\java\top\cnpclines\client\CustomSkinsPack.java:22: 警告: [removal] EventBusSubscriber 中的 bus() 已过时, 且标记为待删除
+@EventBusSubscriber(modid = CNPCLines.MOD_ID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.GAME)
+                                                                   ^
+C:\Users\ASUS\Desktop\Mod开发\CNPC lines\1.21.1NeoForge\src\main\java\top\cnpclines\client\CustomSkinsPack.java:22: 警告: [removal] EventBusSubscriber 中的 Bus 已过时, 且标记为待删除
+@EventBusSubscriber(modid = CNPCLines.MOD_ID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.GAME)
+                                                                                           ^
+C:\Users\ASUS\Desktop\Mod开发\CNPC lines\1.21.1NeoForge\src\main\java\top\cnpclines\client\NpcLineQueue.java:15: 警告: [removal] EventBusSubscriber 中的 bus() 已过时, 且标记为待删除
+@EventBusSubscriber(modid = CNPCLines.MOD_ID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.GAME)
+                                                                   ^
+C:\Users\ASUS\Desktop\Mod开发\CNPC lines\1.21.1NeoForge\src\main\java\top\cnpclines\client\NpcLineQueue.java:15: 警告: [removal] EventBusSubscriber 中的 Bus 已过时, 且标记为待删除
+@EventBusSubscriber(modid = CNPCLines.MOD_ID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.GAME)
+                                                                                           ^
+4 个警告
+
+> Task :classes
+> Task :compileTestJava NO-SOURCE
+> Task :testClasses UP-TO-DATE
+> Task :test NO-SOURCE
+> Task :check UP-TO-DATE
+> Task :jar
+> Task :assemble
+> Task :build
+
+[Incubating] Problems report is available at: file:///C:/Users/ASUS/Desktop/Mod%E5%BC%80%E5%8F%91/CNPC%20lines/1.21.1NeoForge/build/reports/problems/problems-report.html
+
+BUILD SUCCESSFUL in 1s
+5 actionable tasks: 3 executed, 2 up-to-date
+Configuration cache entry reused.

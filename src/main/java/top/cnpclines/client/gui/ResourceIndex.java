@@ -341,13 +341,11 @@ public final class ResourceIndex {
             String aliasPath = key.substring(colon + 1);
             byte[] bytes = entry.getValue().bytes();
             try {
-                Path target;
-                if (entry.getValue().fromDisk()) {
-                    target = CustomSkinsPack.mirror(ns, aliasPath);
-                } else {
+                if (!entry.getValue().fromDisk()) {
                     dropPlayerResidue(ns, aliasPath, bytes);
-                    target = CustomSkinsPack.builtin(ns, aliasPath);
+                    continue;
                 }
+                Path target = CustomSkinsPack.mirror(ns, aliasPath);
                 if (Files.isRegularFile(target)
                     && java.util.Arrays.equals(Files.readAllBytes(target), bytes)) {
                     MATERIALIZED.add(key);
@@ -618,10 +616,10 @@ public final class ResourceIndex {
     }
 
     public static List<ResourceLocation> filesIn(String namespace, String dir) {
-        List<ResourceLocation> result = new ArrayList<>();
+        List<Map.Entry<String, ResourceLocation>> matched = new ArrayList<>();
         TreeMap<String, ResourceLocation> all = FILES.get(namespace);
         if (all == null || dir == null) {
-            return result;
+            return new ArrayList<>();
         }
         for (Map.Entry<String, ResourceLocation> entry : all.entrySet()) {
             String path = entry.getKey();
@@ -632,8 +630,104 @@ public final class ResourceIndex {
             if (rest.isEmpty() || rest.indexOf('/') >= 0) {
                 continue;
             }
+            matched.add(entry);
+        }
+        matched.sort((a, b) -> compareNames(nameOf(a.getKey()), nameOf(b.getKey())));
+        List<ResourceLocation> result = new ArrayList<>(matched.size());
+        for (Map.Entry<String, ResourceLocation> entry : matched) {
             result.add(entry.getValue());
         }
         return result;
+    }
+
+    static String nameOf(String path) {
+        int slash = path.lastIndexOf('/');
+        return slash < 0 ? path : path.substring(slash + 1);
+    }
+
+    static int compareNames(String a, String b) {
+        int i = 0;
+        int j = 0;
+        while (i < a.length() && j < b.length()) {
+            char ca = a.charAt(i);
+            char cb = b.charAt(j);
+            if (Character.isDigit(ca) && Character.isDigit(cb)) {
+                int si = i;
+                int sj = j;
+                while (i < a.length() && Character.isDigit(a.charAt(i))) {
+                    i++;
+                }
+                while (j < b.length() && Character.isDigit(b.charAt(j))) {
+                    j++;
+                }
+                int c = compareDigitRun(a.substring(si, i), b.substring(sj, j));
+                if (c != 0) {
+                    return c;
+                }
+            } else {
+                int c = Character.toLowerCase(ca) - Character.toLowerCase(cb);
+                if (c != 0) {
+                    return c;
+                }
+                i++;
+                j++;
+            }
+        }
+        if (a.length() - i != b.length() - j) {
+            return a.length() - i - (b.length() - j);
+        }
+        return a.compareTo(b);
+    }
+
+    private static int compareDigitRun(String da, String db) {
+        String sa = stripLeadingZeros(da);
+        String sb = stripLeadingZeros(db);
+        if (sa.length() != sb.length()) {
+            return sa.length() - sb.length();
+        }
+        return sa.compareTo(sb);
+    }
+
+    private static String stripLeadingZeros(String digits) {
+        int k = 0;
+        while (k < digits.length() - 1 && digits.charAt(k) == '0') {
+            k++;
+        }
+        return digits.substring(k);
+    }
+
+    public static final class IndexedFile {
+
+        private final String namespace;
+        private final String path;
+        private final ResourceLocation location;
+
+        IndexedFile(String namespace, String path, ResourceLocation location) {
+            this.namespace = namespace;
+            this.path = path;
+            this.location = location;
+        }
+
+        public String namespace() {
+            return namespace;
+        }
+
+        public String path() {
+            return path;
+        }
+
+        public ResourceLocation location() {
+            return location;
+        }
+    }
+
+    public static List<IndexedFile> allFiles() {
+        List<IndexedFile> list = new ArrayList<>();
+        for (Map.Entry<String, TreeMap<String, ResourceLocation>> nsEntry : FILES.entrySet()) {
+            for (Map.Entry<String, ResourceLocation> file : nsEntry.getValue().entrySet()) {
+                list.add(new IndexedFile(nsEntry.getKey(), file.getKey(), file.getValue()));
+            }
+        }
+        return list;
     }
 }

@@ -24,8 +24,6 @@ public final class CustomSkinsPack {
     public static final String NAMESPACE = "customnpcs";
     public static final String DESCRIPTION =
         "由CNPCLines自动创建的材质包，用于便捷添加皮肤、披风、额外材质文件。";
-    public static final String BUILTIN_DESCRIPTION =
-        "由CNPCLines自动创建，存放内置皮肤的别名文件，请勿修改。";
     public static final Pattern NAME_PATTERN = Pattern.compile("^[a-z0-9_]+$");
 
     private static final Logger LOGGER = LogManager.getLogger("cnpclines");
@@ -71,7 +69,7 @@ public final class CustomSkinsPack {
 
     private static void ensure(Minecraft minecraft) throws IOException {
         writePackMeta(root(), DESCRIPTION);
-        writePackMeta(builtinRoot(), BUILTIN_DESCRIPTION);
+        boolean deselected = cleanupLegacyBuiltin(minecraft);
         for (String dir : BASE_DIRS) {
             Files.createDirectories(mirror(NAMESPACE, dir));
         }
@@ -80,12 +78,51 @@ public final class CustomSkinsPack {
         ResourcePackRepository repository = minecraft.getResourcePackRepository();
         repository.updateRepositoryEntriesAll();
         boolean selectionChanged = addSelectedPack(minecraft, PACK_NAME);
-        if (addSelectedPack(minecraft, BUILTIN_PACK_NAME)) {
+        if (deselected) {
             selectionChanged = true;
         }
         boolean pendingReload = top.cnpclines.client.gui.ResourceIndex.consumePendingReload();
         if (selectionChanged || filesChanged || pendingReload) {
             minecraft.refreshResources();
+        }
+    }
+
+    private static boolean cleanupLegacyBuiltin(Minecraft minecraft) {
+        try {
+            boolean selected = false;
+            for (String id : minecraft.gameSettings.resourcePacks) {
+                if (id.endsWith(BUILTIN_PACK_NAME)) {
+                    selected = true;
+                    break;
+                }
+            }
+            Path legacy = builtinRoot();
+            boolean existed = Files.exists(legacy);
+            if (existed) {
+                deleteRecursively(legacy);
+                LOGGER.info("Removed legacy builtin resource pack: {}", legacy);
+            }
+            if (selected) {
+                minecraft.gameSettings.resourcePacks.removeIf(id -> id.endsWith(BUILTIN_PACK_NAME));
+                minecraft.gameSettings.saveOptions();
+            }
+            return selected;
+        } catch (Exception e) {
+            LOGGER.warn("Legacy builtin pack cleanup failed", e);
+            return false;
+        }
+    }
+
+    private static void deleteRecursively(Path path) {
+        try (Stream<Path> walk = Files.walk(path)) {
+            walk.sorted(java.util.Comparator.reverseOrder()).forEach(item -> {
+                try {
+                    Files.delete(item);
+                } catch (IOException ignored) {
+                }
+            });
+        } catch (Exception e) {
+            LOGGER.warn("Failed to delete {}", path, e);
         }
     }
 
@@ -166,10 +203,6 @@ public final class CustomSkinsPack {
 
     public static Path mirror(String namespace, String dir) {
         return under(root(), namespace, dir);
-    }
-
-    public static Path builtin(String namespace, String dir) {
-        return under(builtinRoot(), namespace, dir);
     }
 
     private static Path under(Path root, String namespace, String dir) {

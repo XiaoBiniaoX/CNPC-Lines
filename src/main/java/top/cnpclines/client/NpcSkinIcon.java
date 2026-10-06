@@ -17,6 +17,7 @@ import net.minecraft.client.resources.IResource;
 import net.minecraft.util.ResourceLocation;
 import noppes.npcs.entity.EntityNPCInterface;
 import noppes.npcs.entity.data.DataDisplay;
+import top.cnpclines.client.gui.ResourceIndex;
 
 public final class NpcSkinIcon {
     private static final Map<String, String> REGISTERED = new HashMap<>();
@@ -110,8 +111,32 @@ public final class NpcSkinIcon {
     }
 
     private static byte[] readSkinPng(String path) {
+        byte[] bytes = readResourceBytes(new ResourceLocation(path));
+        if (bytes != null) {
+            return bytes;
+        }
         try {
-            ResourceLocation location = new ResourceLocation(path);
+            byte[] weird = ResourceIndex.weirdBytes(new ResourceLocation(path));
+            if (weird != null) {
+                return weird;
+            }
+            String alias = ResourceIndex.resolveAlias(path);
+            if (alias == null) {
+                return null;
+            }
+            ResourceLocation aliasLocation = new ResourceLocation(alias);
+            weird = ResourceIndex.weirdBytes(aliasLocation);
+            if (weird != null) {
+                return weird;
+            }
+            return readResourceBytes(aliasLocation);
+        } catch (Exception ignored) {
+        }
+        return null;
+    }
+
+    private static byte[] readResourceBytes(ResourceLocation location) {
+        try {
             Minecraft mc = Minecraft.getMinecraft();
             IResource resource = mc.getResourceManager().getResource(location);
             if (resource != null) {

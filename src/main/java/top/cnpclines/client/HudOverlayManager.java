@@ -229,6 +229,30 @@ public final class HudOverlayManager {
             }
         } catch (Exception ignored) {
         }
+        if (size[0] == 16 && size[1] == 16) {
+            try {
+                net.minecraft.client.renderer.texture.ITextureObject textureObject =
+                    Minecraft.getMinecraft().getTextureManager().getTexture(texture);
+                if (textureObject instanceof net.minecraft.client.renderer.texture.DynamicTexture) {
+                    net.minecraft.client.renderer.texture.DynamicTexture dynamic =
+                        (net.minecraft.client.renderer.texture.DynamicTexture) textureObject;
+                    if (dynamic.getTextureData() != null) {
+                        java.lang.reflect.Field widthField =
+                            net.minecraft.client.renderer.texture.DynamicTexture.class.getDeclaredField("width");
+                        java.lang.reflect.Field heightField =
+                            net.minecraft.client.renderer.texture.DynamicTexture.class.getDeclaredField("height");
+                        widthField.setAccessible(true);
+                        heightField.setAccessible(true);
+                        int width = widthField.getInt(dynamic);
+                        int height = heightField.getInt(dynamic);
+                        if (width > 0 && height > 0) {
+                            size = new int[] {width, height};
+                        }
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+        }
         textureSizes.put(texture, size);
         return size;
     }

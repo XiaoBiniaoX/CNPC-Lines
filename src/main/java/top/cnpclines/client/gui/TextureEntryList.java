@@ -33,7 +33,7 @@ public class TextureEntryList {
     private static final int COL_ROW_SELECTED = 0xFFE0A040;
     private static final int COL_NAME = 0xFF303030;
 
-    private static final int[][] CAPE_SLICES = {
+    static final int[][] CAPE_SLICES = {
         {12, 1, 10, 16},
         {1, 1, 10, 16},
         {36, 2, 10, 20},
@@ -110,6 +110,16 @@ public class TextureEntryList {
         return null;
     }
 
+    public void setSelected(ResourceLocation location) {
+        int index = location == null ? -1 : this.items.indexOf(location);
+        this.selected = index;
+        if (index >= 0) {
+            int contentH = this.h - 2;
+            float target = index * ROW_H - (contentH - ROW_H) / 2f;
+            this.scroll = clampScroll(target);
+        }
+    }
+
     public void render(int mouseX, int mouseY) {
         Gui.drawRect(this.x, this.y, this.x + this.w, this.y + this.h, COL_FRAME);
         Gui.drawRect(this.x + 1, this.y + 1, this.x + this.w - 1, this.y + this.h - 1, COL_BG);
@@ -136,7 +146,7 @@ public class TextureEntryList {
         for (int i = first; i < last; i++) {
             int rowY = contentY + (int) (i * ROW_H - this.scroll);
             int rowBottom = Math.min(rowY + ROW_H, contentY + contentH);
-            if (rowY >= contentY + contentH) {
+            if (rowY + ROW_H > contentY + contentH) {
                 break;
             }
             boolean dragging = this.swipeEnabled && i == this.dragIndex
@@ -183,11 +193,11 @@ public class TextureEntryList {
                     contentX + 27 + offset, rowY + 1, 24, true);
             } else if (slots == CAPE_SLICES.length) {
                 for (int s = 0; s < CAPE_SLICES.length; s++) {
-                    drawSlice(contentX + 1 + s * 26 + offset, rowY + 1,
+                    drawSlice(this.font, contentX + 1 + s * 26 + offset, rowY + 1,
                         location, CAPE_SLICES[s]);
                 }
             } else {
-                drawThumb(contentX + 1 + offset, rowY + 1, location);
+                drawThumb(this.font, contentX + 1 + offset, rowY + 1, location);
             }
             int nameX = contentX + 1 + slots * 26 + offset;
             int nameW = contentX + rowW - 3 - nameX;
@@ -302,7 +312,12 @@ public class TextureEntryList {
         if (offset < 0) {
             return -1;
         }
-        return offset / ROW_H;
+        int index = offset / ROW_H;
+        int rowTop = (int) (index * ROW_H - this.scroll);
+        if (rowTop < 0 || rowTop + ROW_H > this.h - 2) {
+            return -1;
+        }
+        return index;
     }
 
     private float maxScroll() {
@@ -345,7 +360,7 @@ public class TextureEntryList {
         this.scroll = clampScroll((float) (fraction * max));
     }
 
-    private void drawSlotFrame(int sx, int sy) {
+    static void drawSlotFrame(int sx, int sy) {
         int size = 24;
         Gui.drawRect(sx, sy, sx + size, sy + size, 0xFF3A3A3A);
         for (int row = 0; row < 5; row++) {
@@ -356,7 +371,7 @@ public class TextureEntryList {
         }
     }
 
-    private void drawThumb(int sx, int sy, ResourceLocation location) {
+    static void drawThumb(FontRenderer font, int sx, int sy, ResourceLocation location) {
         int size = 24;
         drawSlotFrame(sx, sy);
         if (location == null) {
@@ -364,11 +379,11 @@ public class TextureEntryList {
         }
         TexturePreviewLoader.Preview preview = TexturePreviewLoader.peek(location);
         if (preview == null) {
-            this.font.drawString("...", sx + size / 2 - this.font.getStringWidth("...") / 2, sy + 9, 0xFFFFFFFF);
+            font.drawString("...", sx + size / 2 - font.getStringWidth("...") / 2, sy + 9, 0xFFFFFFFF);
             return;
         }
         if (preview.failed() || preview.front() == null) {
-            this.font.drawString("无", sx + size / 2 - this.font.getStringWidth("无") / 2, sy + 9, 0xFFFFFFFF);
+            font.drawString("无", sx + size / 2 - font.getStringWidth("无") / 2, sy + 9, 0xFFFFFFFF);
             return;
         }
         int texWidth = preview.width();
@@ -381,7 +396,7 @@ public class TextureEntryList {
             0.0F, 0.0F, texWidth, texHeight, drawWidth, drawHeight, texWidth, texHeight);
     }
 
-    private void drawSlice(int sx, int sy, ResourceLocation location, int[] slice) {
+    static void drawSlice(FontRenderer font, int sx, int sy, ResourceLocation location, int[] slice) {
         int size = 24;
         drawSlotFrame(sx, sy);
         if (location == null) {
@@ -389,11 +404,11 @@ public class TextureEntryList {
         }
         TexturePreviewLoader.Preview preview = TexturePreviewLoader.peek(location);
         if (preview == null) {
-            this.font.drawString("...", sx + size / 2 - this.font.getStringWidth("...") / 2, sy + 9, 0xFFFFFFFF);
+            font.drawString("...", sx + size / 2 - font.getStringWidth("...") / 2, sy + 9, 0xFFFFFFFF);
             return;
         }
         if (preview.failed() || preview.front() == null) {
-            this.font.drawString("无", sx + size / 2 - this.font.getStringWidth("无") / 2, sy + 9, 0xFFFFFFFF);
+            font.drawString("无", sx + size / 2 - font.getStringWidth("无") / 2, sy + 9, 0xFFFFFFFF);
             return;
         }
         int sliceWidth = slice[2];

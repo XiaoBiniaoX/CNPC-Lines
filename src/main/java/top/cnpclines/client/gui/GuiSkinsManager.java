@@ -12,11 +12,15 @@ import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.GuiTextField;
 import net.minecraft.init.SoundEvents;
 import net.minecraft.util.ResourceLocation;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 import top.cnpclines.client.CustomSkinsPack;
 
 public class GuiSkinsManager extends GuiScreen {
+
+    private static final Logger LOGGER = LogManager.getLogger("cnpclines");
 
     private static final int PANEL_W = 420;
     private static final int PANEL_H = 232;
@@ -71,6 +75,8 @@ public class GuiSkinsManager extends GuiScreen {
     private EntryTreeView tree;
     private TextureEntryList list;
     private GuiTextField nameBox;
+    private GuiTextField searchBox;
+    private SearchResultView results;
     private GuiButton deleteButton;
     private String nameHint = "";
 
@@ -81,7 +87,7 @@ public class GuiSkinsManager extends GuiScreen {
     private int deleteFocus = FOCUS_NONE;
     private ResourceLocation pendingFile;
     private String pendingDir;
-    private String status = "";
+    private volatile String status = "";
     private volatile List<Path> pendingImportFiles;
     private volatile boolean importDialogOpen;
 
@@ -126,10 +132,19 @@ public class GuiSkinsManager extends GuiScreen {
                 }
             });
             EntryTreeView.openDefault(this.tree, MAIN_PATHS[this.tab], ROOT_PATHS[this.tab]);
+            this.results = new SearchResultView(this.fontRenderer);
+            this.results.setListener(this::locate);
+            this.results.setSkinThumbRenderer(parent::drawSkinThumb);
         }
-        this.tree.setBounds(this.guiLeft + 6, this.guiTop + 20, 108, 156);
-        this.list.setBounds(this.guiLeft + 120, this.guiTop + 20, 190, 156);
+        this.searchBox = new GuiTextField(2, this.fontRenderer, this.guiLeft + 6, this.guiTop + 20, 304, 16);
+        this.searchBox.setMaxStringLength(64);
+        this.searchBox.setText("");
+        this.searchBox.setFocused(false);
+        this.tree.setBounds(this.guiLeft + 6, this.guiTop + 38, 108, 138);
+        this.list.setBounds(this.guiLeft + 120, this.guiTop + 38, 190, 138);
+        this.results.setBounds(this.guiLeft + 6, this.guiTop + 38, 304, 138);
         refreshList();
+        refreshSearch();
 
         this.buttonList.add(new GuiButton(BTN_CREATE, this.guiLeft + 316, this.guiTop + 20, 98, 18, "新建文件夹"));
         this.buttonList.add(new GuiButton(BTN_RENAME, this.guiLeft + 316, this.guiTop + 41, 98, 18, "重命名"));
@@ -152,6 +167,61 @@ public class GuiSkinsManager extends GuiScreen {
         this.list.setHighlight(this.parent.currentTextureFor(this.tab));
     }
 
+    private boolean isSearchActive() {
+        return this.searchBox != null && !this.searchBox.getText().trim().isEmpty()
+            && this.results != null;
+    }
+
+    private void refreshSearch() {
+        if (this.results == null) {
+            return;
+        }
+        String q = this.searchBox == null ? "" : this.searchBox.getText().trim();
+        String scope = searchScopeId();
+        this.results.setScope(EntryTreeView.displayPath(scope));
+        this.results.setPreviewMode(this.tab);
+        this.results.setHighlight(this.parent.currentTextureFor(this.tab));
+        this.results.setResults(q.isEmpty()
+            ? java.util.Collections.<SearchResultView.Row>emptyList()
+            : SkinSearch.query(q, scope));
+    }
+
+    private String searchScopeId() {
+        String dir = this.tree.displayDir();
+        String parent = EntryTreeView.parentOf(dir);
+        if (parent == null) {
+            return dir;
+        }
+        String parentPath = EntryTreeView.pathOf(parent);
+        if (parentPath == null || parentPath.isEmpty()) {
+            return dir;
+        }
+        return parent;
+    }
+
+    private void clearSearch() {
+        this.searchBox.setText("");
+        this.searchBox.setFocused(false);
+        refreshSearch();
+    }
+
+    private void locate(ResourceLocation location, String dirId) {
+        int nextTab = SkinSearch.tabForPath(dirId);
+        if (nextTab >= 0 && nextTab != this.tab) {
+            this.tab = nextTab;
+            this.mode = MODE_NONE;
+            this.targetId = null;
+            disarmDelete();
+        }
+        clearSearch();
+        this.tree.configure(MAIN_PATHS[this.tab], dirId);
+        this.tree.restoreSelection(dirId);
+        refreshList();
+        this.list.setSelected(location);
+        this.status = "已定位 " + EntryTreeView.displayPath(dirId);
+        playClick();
+    }
+
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         TexturePreviewLoader.drain();
@@ -169,12 +239,28 @@ public class GuiSkinsManager extends GuiScreen {
         drawTabsBack();
         drawPanel();
         drawTabsFront();
-        this.tree.render(mouseX, mouseY);
-        this.list.render(mouseX, mouseY);
+        if (isSearchActive()) {
+            this.results.render(mouseX, mouseY);
+        } else {
+            this.tree.render(mouseX, mouseY);
+            this.list.render(mouseX, mouseY);
+        }
         drawControls();
         drawNameBox();
+        drawSearchBox();
         super.drawScreen(mouseX, mouseY, partialTicks);
         drawTooltips(mouseX, mouseY);
+    }
+
+    private void drawSearchBox() {
+        if (this.searchBox == null) {
+            return;
+        }
+        this.searchBox.drawTextBox();
+        if (this.searchBox.getText().isEmpty()) {
+            this.fontRenderer.drawString("搜索皮肤：文件名 / 拼音 / 首字母（如 hs → 红色）",
+                this.searchBox.x + 3, this.searchBox.y + 4, 0xFF909090);
+        }
     }
 
     private void drawNameBox() {
@@ -226,8 +312,24 @@ public class GuiSkinsManager extends GuiScreen {
                 disarmDelete();
             }
         }
-        if (this.tree.mouseClicked(mouseX, mouseY, mouseButton)) return;
-        if (this.list.mouseClicked(mouseX, mouseY, mouseButton)) return;
+        if (this.searchBox != null) {
+            boolean inSearch = this.searchBox.mouseClicked(mouseX, mouseY, mouseButton);
+            if (inSearch) {
+                if (this.nameBox != null) {
+                    this.nameBox.setFocused(false);
+                }
+                return;
+            }
+            if (mouseButton == 0) {
+                this.searchBox.setFocused(false);
+            }
+        }
+        if (isSearchActive()) {
+            if (this.results.mouseClicked(mouseX, mouseY, mouseButton)) return;
+        } else {
+            if (this.tree.mouseClicked(mouseX, mouseY, mouseButton)) return;
+            if (this.list.mouseClicked(mouseX, mouseY, mouseButton)) return;
+        }
         if (this.nameBox != null) {
             boolean inBox = this.nameBox.mouseClicked(mouseX, mouseY, mouseButton);
             if (inBox) return;
@@ -258,8 +360,12 @@ public class GuiSkinsManager extends GuiScreen {
             int mouseX = Mouse.getEventX() * this.width / this.mc.displayWidth;
             int mouseY = this.height - Mouse.getEventY() * this.height / this.mc.displayHeight - 1;
             double delta = wheel > 0 ? 1 : -1;
-            if (this.tree.mouseScrolled(mouseX, mouseY, delta)) return;
-            if (this.list.mouseScrolled(mouseX, mouseY, delta)) return;
+            if (isSearchActive()) {
+                if (this.results.mouseScrolled(mouseX, mouseY, delta)) return;
+            } else {
+                if (this.tree.mouseScrolled(mouseX, mouseY, delta)) return;
+                if (this.list.mouseScrolled(mouseX, mouseY, delta)) return;
+            }
         }
     }
 
@@ -327,16 +433,28 @@ public class GuiSkinsManager extends GuiScreen {
             return;
         }
         this.importDialogOpen = true;
+        this.status = "正在打开文件选择框…";
+        LOGGER.info("import dialog: opening JFileChooser");
         javax.swing.SwingUtilities.invokeLater(() -> {
             try {
-                javax.swing.JFileChooser chooser = new javax.swing.JFileChooser();
+                javax.swing.JFileChooser chooser = new javax.swing.JFileChooser() {
+                    @Override
+                    protected javax.swing.JDialog createDialog(java.awt.Component parent)
+                        throws java.awt.HeadlessException {
+                        javax.swing.JDialog dialog = super.createDialog(parent);
+                        dialog.setAlwaysOnTop(true);
+                        return dialog;
+                    }
+                };
                 chooser.setDialogTitle("导入 PNG 皮肤");
                 chooser.setMultiSelectionEnabled(true);
                 chooser.setFileSelectionMode(javax.swing.JFileChooser.FILES_ONLY);
                 chooser.setAcceptAllFileFilterUsed(false);
                 chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
                     "PNG 图片 (*.png)", "png"));
-                if (chooser.showOpenDialog(null) == javax.swing.JFileChooser.APPROVE_OPTION) {
+                int result = chooser.showOpenDialog(null);
+                LOGGER.info("import dialog: closed with {}", result);
+                if (result == javax.swing.JFileChooser.APPROVE_OPTION) {
                     List<Path> paths = new ArrayList<>();
                     for (java.io.File file : chooser.getSelectedFiles()) {
                         paths.add(file.toPath());
@@ -344,8 +462,12 @@ public class GuiSkinsManager extends GuiScreen {
                     if (!paths.isEmpty()) {
                         this.pendingImportFiles = paths;
                     }
+                } else {
+                    this.status = "已取消导入";
                 }
-            } catch (Throwable ignored) {
+            } catch (Throwable t) {
+                LOGGER.error("import dialog failed", t);
+                this.status = "打开文件选择框失败: " + t;
             } finally {
                 this.importDialogOpen = false;
             }
@@ -416,10 +538,31 @@ public class GuiSkinsManager extends GuiScreen {
         disarmDelete();
         EntryTreeView.openDefault(this.tree, MAIN_PATHS[this.tab], ROOT_PATHS[this.tab]);
         refreshList();
+        refreshSearch();
     }
 
     @Override
     protected void keyTyped(char typedChar, int keyCode) throws IOException {
+        if (this.searchBox != null && this.searchBox.isFocused()) {
+            if (keyCode == Keyboard.KEY_RETURN || keyCode == Keyboard.KEY_NUMPADENTER) {
+                SearchResultView.Row row = this.results.first();
+                if (row != null) {
+                    locate(row.location, row.dirId);
+                }
+                return;
+            }
+            if (keyCode == 1) {
+                if (isSearchActive()) {
+                    clearSearch();
+                    return;
+                }
+                close();
+                return;
+            }
+            this.searchBox.textboxKeyTyped(typedChar, keyCode);
+            refreshSearch();
+            return;
+        }
         if (keyCode == 1) {
             close();
             return;

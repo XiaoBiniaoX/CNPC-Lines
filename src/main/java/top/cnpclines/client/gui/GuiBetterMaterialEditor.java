@@ -36,6 +36,7 @@ public class GuiBetterMaterialEditor extends GuiScreen implements ISliderListene
 
     private static final int BTN_SAVE = 100;
     private static final int BTN_CANCEL = 101;
+    private static final int BTN_MANAGER = 102;
     private static final int SLIDER_ROTATION = 0;
 
     private static final String[] TAB_NAMES = {"材质", "披风", "附加材质"};
@@ -80,6 +81,8 @@ public class GuiBetterMaterialEditor extends GuiScreen implements ISliderListene
     private TextureEntryList list;
     private GuiNpcSlider slider;
     private GuiTextField textureBox;
+    private GuiTextField searchBox;
+    private SearchResultView results;
     private String boxMessage = "";
 
     public GuiBetterMaterialEditor(GuiNpcDisplay parent) {
@@ -122,9 +125,17 @@ public class GuiBetterMaterialEditor extends GuiScreen implements ISliderListene
                 public void onDelete(ResourceLocation location) {
                 }
             });
+            this.results = new SearchResultView(this.fontRenderer);
+            this.results.setListener(this::locate);
+            this.results.setSkinThumbRenderer(this::drawSkinThumb);
         }
-        this.tree.setBounds(this.guiLeft + 6, this.guiTop + 20, 108, 156);
-        this.list.setBounds(this.guiLeft + 120, this.guiTop + 20, 190, 156);
+        this.searchBox = new GuiTextField(3, this.fontRenderer, this.guiLeft + 6, this.guiTop + 20, 304, 16);
+        this.searchBox.setMaxStringLength(64);
+        this.searchBox.setText("");
+        this.searchBox.setFocused(false);
+        this.tree.setBounds(this.guiLeft + 6, this.guiTop + 38, 108, 138);
+        this.list.setBounds(this.guiLeft + 120, this.guiTop + 38, 190, 138);
+        this.results.setBounds(this.guiLeft + 6, this.guiTop + 38, 304, 138);
 
         this.textureBox = new GuiTextField(0, this.fontRenderer,
             this.guiLeft + 40, this.guiTop + 183, 270, 16);
@@ -136,9 +147,11 @@ public class GuiBetterMaterialEditor extends GuiScreen implements ISliderListene
         } else {
             refreshTree();
         }
+        refreshSearch();
 
         this.buttonList.add(new GuiButton(BTN_SAVE, this.guiLeft + 284, this.guiTop + 206, 64, 20, "保存"));
         this.buttonList.add(new GuiButton(BTN_CANCEL, this.guiLeft + 350, this.guiTop + 206, 64, 20, "取消"));
+        this.buttonList.add(new GuiButton(BTN_MANAGER, this.guiLeft + 8, this.guiTop + 206, 94, 20, MANAGER_TAB));
 
         this.slider = new GuiNpcSlider(this, SLIDER_ROTATION, this.guiLeft + 318, this.guiTop + 124, 94, 20,
             this.rotation / 360f);
@@ -153,11 +166,27 @@ public class GuiBetterMaterialEditor extends GuiScreen implements ISliderListene
         drawTabsBack();
         drawPanel();
         drawTabsFront();
-        this.tree.render(mouseX, mouseY);
-        this.list.render(mouseX, mouseY);
+        if (isSearchActive()) {
+            this.results.render(mouseX, mouseY);
+        } else {
+            this.tree.render(mouseX, mouseY);
+            this.list.render(mouseX, mouseY);
+        }
         drawPreview(mouseX, mouseY);
         drawTextureBox();
+        drawSearchBox();
         super.drawScreen(mouseX, mouseY, partialTicks);
+    }
+
+    private void drawSearchBox() {
+        if (this.searchBox == null) {
+            return;
+        }
+        this.searchBox.drawTextBox();
+        if (this.searchBox.getText().isEmpty()) {
+            this.fontRenderer.drawString("搜索皮肤：文件名 / 拼音 / 首字母（如 hs → 红色）",
+                this.searchBox.x + 3, this.searchBox.y + 4, 0xFF909090);
+        }
     }
 
     private void drawTextureBox() {
@@ -176,16 +205,28 @@ public class GuiBetterMaterialEditor extends GuiScreen implements ISliderListene
         if (mouseButton == 0) {
             int index = tabAt(mouseX, mouseY);
             if (index >= 0) {
-                if (index < TAB_NAMES.length) {
-                    switchTab(index);
-                } else {
-                    openManager();
-                }
+                switchTab(index);
                 return;
             }
         }
-        if (this.tree.mouseClicked(mouseX, mouseY, mouseButton)) return;
-        if (this.list.mouseClicked(mouseX, mouseY, mouseButton)) return;
+        if (this.searchBox != null) {
+            boolean inSearch = this.searchBox.mouseClicked(mouseX, mouseY, mouseButton);
+            if (inSearch) {
+                if (this.textureBox != null) {
+                    this.textureBox.setFocused(false);
+                }
+                return;
+            }
+            if (mouseButton == 0) {
+                this.searchBox.setFocused(false);
+            }
+        }
+        if (isSearchActive()) {
+            if (this.results.mouseClicked(mouseX, mouseY, mouseButton)) return;
+        } else {
+            if (this.tree.mouseClicked(mouseX, mouseY, mouseButton)) return;
+            if (this.list.mouseClicked(mouseX, mouseY, mouseButton)) return;
+        }
         if (this.textureBox != null) {
             boolean inBox = this.textureBox.mouseClicked(mouseX, mouseY, mouseButton);
             if (!inBox && mouseButton == 0) {
@@ -216,8 +257,12 @@ public class GuiBetterMaterialEditor extends GuiScreen implements ISliderListene
             int mouseX = Mouse.getEventX() * this.width / this.mc.displayWidth;
             int mouseY = this.height - Mouse.getEventY() * this.height / this.mc.displayHeight - 1;
             double delta = wheel > 0 ? 1 : -1;
-            if (this.tree.mouseScrolled(mouseX, mouseY, delta)) return;
-            if (this.list.mouseScrolled(mouseX, mouseY, delta)) return;
+            if (isSearchActive()) {
+                if (this.results.mouseScrolled(mouseX, mouseY, delta)) return;
+            } else {
+                if (this.tree.mouseScrolled(mouseX, mouseY, delta)) return;
+                if (this.list.mouseScrolled(mouseX, mouseY, delta)) return;
+            }
         }
     }
 
@@ -229,6 +274,10 @@ public class GuiBetterMaterialEditor extends GuiScreen implements ISliderListene
         }
         if (button.id == BTN_CANCEL) {
             cancelAndReturn();
+            return;
+        }
+        if (button.id == BTN_MANAGER) {
+            openManager();
             return;
         }
         super.actionPerformed(button);
@@ -250,6 +299,26 @@ public class GuiBetterMaterialEditor extends GuiScreen implements ISliderListene
 
     @Override
     protected void keyTyped(char typedChar, int keyCode) throws IOException {
+        if (this.searchBox != null && this.searchBox.isFocused()) {
+            if (keyCode == Keyboard.KEY_RETURN || keyCode == Keyboard.KEY_NUMPADENTER) {
+                SearchResultView.Row row = this.results.first();
+                if (row != null) {
+                    locate(row.location, row.dirId);
+                }
+                return;
+            }
+            if (keyCode == 1) {
+                if (isSearchActive()) {
+                    clearSearch();
+                    return;
+                }
+                cancelAndReturn();
+                return;
+            }
+            this.searchBox.textboxKeyTyped(typedChar, keyCode);
+            refreshSearch();
+            return;
+        }
         if (keyCode == 1) {
             cancelAndReturn();
             return;
@@ -385,6 +454,7 @@ public class GuiBetterMaterialEditor extends GuiScreen implements ISliderListene
         if (nextTab == this.tab) return;
         this.tab = nextTab;
         resetView();
+        refreshSearch();
     }
 
     private void resetView() {
@@ -431,6 +501,57 @@ public class GuiBetterMaterialEditor extends GuiScreen implements ISliderListene
         this.list.setItems(ResourceIndex.filesIn(EntryTreeView.nsOf(dir), EntryTreeView.pathOf(dir)));
         this.list.setHighlight(currentTexture());
         syncBox();
+    }
+
+    private boolean isSearchActive() {
+        return this.searchBox != null && !this.searchBox.getText().trim().isEmpty()
+            && this.results != null;
+    }
+
+    private void refreshSearch() {
+        if (this.results == null) {
+            return;
+        }
+        String q = this.searchBox == null ? "" : this.searchBox.getText().trim();
+        String scope = searchScopeId();
+        this.results.setScope(EntryTreeView.displayPath(scope));
+        this.results.setPreviewMode(this.tab);
+        this.results.setHighlight(currentTexture());
+        this.results.setResults(q.isEmpty()
+            ? java.util.Collections.<SearchResultView.Row>emptyList()
+            : SkinSearch.query(q, scope));
+    }
+
+    private String searchScopeId() {
+        String dir = this.tree.displayDir();
+        String parent = EntryTreeView.parentOf(dir);
+        if (parent == null) {
+            return dir;
+        }
+        String parentPath = EntryTreeView.pathOf(parent);
+        if (parentPath == null || parentPath.isEmpty()) {
+            return dir;
+        }
+        return parent;
+    }
+
+    private void clearSearch() {
+        this.searchBox.setText("");
+        this.searchBox.setFocused(false);
+        refreshSearch();
+    }
+
+    private void locate(ResourceLocation location, String dirId) {
+        int nextTab = SkinSearch.tabForPath(dirId);
+        if (nextTab >= 0) {
+            this.tab = nextTab;
+        }
+        clearSearch();
+        this.tree.configure(MAIN_PATHS[this.tab], dirId);
+        this.tree.restoreSelection(dirId);
+        refreshList();
+        this.list.setSelected(location);
+        this.boxMessage = "已定位: " + EntryTreeView.displayPath(dirId);
     }
 
     private void openManager() {
@@ -555,7 +676,7 @@ public class GuiBetterMaterialEditor extends GuiScreen implements ISliderListene
             int tw = rects[i][2];
             Gui.drawRect(tx, ty, tx + tw, this.guiTop, COL_TAB_OFF);
             Gui.drawRect(tx, ty, tx + tw, ty + 1, COL_LIGHT);
-            drawCentered(tabLabel(i), tx + 26, this.guiTop - 4, 0xFFFFFFFF);
+            drawCentered(TAB_NAMES[i], tx + 26, this.guiTop - 4, 0xFFFFFFFF);
             drawIcon(TAB_ICONS[i], tx + 8, this.guiTop - 8);
         }
     }
@@ -570,7 +691,7 @@ public class GuiBetterMaterialEditor extends GuiScreen implements ISliderListene
         Gui.drawRect(tx, ty, tx + 1, this.guiTop + 1, COL_LIGHT);
         Gui.drawRect(tx, ty, tx + tw, ty + 1, COL_LIGHT);
         Gui.drawRect(tx + tw - 1, ty, tx + tw, this.guiTop + 1, COL_DARK);
-        this.fontRenderer.drawString(tabLabel(i), tx + 26, ty + 4, COL_TEXT);
+        this.fontRenderer.drawString(TAB_NAMES[i], tx + 26, ty + 4, COL_TEXT);
         drawIcon(TAB_ICONS[i], tx + 8, ty + 1);
     }
 
@@ -583,22 +704,16 @@ public class GuiBetterMaterialEditor extends GuiScreen implements ISliderListene
         Gui.drawModalRectWithCustomSizedTexture(x, y, 0.0F, 0.0F, 16, 16, 16, 16);
     }
 
-    private String tabLabel(int i) {
-        return i < TAB_NAMES.length ? TAB_NAMES[i] : MANAGER_TAB;
-    }
-
     private int[][] tabRects() {
         int top = Math.max(0, this.guiTop - TAB_H);
         int height = this.guiTop + 1 - top;
-        int[][] rects = new int[TAB_NAMES.length + 1][4];
+        int[][] rects = new int[TAB_NAMES.length][4];
         int tx = this.guiLeft + 6;
         for (int i = 0; i < TAB_NAMES.length; i++) {
             int tw = tabWidth(TAB_NAMES[i]);
             rects[i] = new int[]{tx, top, tw, height};
             tx += tw + 2;
         }
-        int sw = tabWidth(MANAGER_TAB);
-        rects[TAB_NAMES.length] = new int[]{this.guiLeft + PANEL_W - 6 - sw, top, sw, height};
         return rects;
     }
 

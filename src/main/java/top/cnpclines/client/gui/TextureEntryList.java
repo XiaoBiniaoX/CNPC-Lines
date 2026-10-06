@@ -33,7 +33,7 @@ public class TextureEntryList {
     private static final int COL_ROW_SELECTED = 0xFFE0A040;
     private static final int COL_NAME = 0xFF303030;
 
-    private static final int[][] CAPE_SLICES = {
+    static final int[][] CAPE_SLICES = {
         {12, 1, 10, 16},
         {1, 1, 10, 16},
         {36, 2, 10, 20},
@@ -92,6 +92,22 @@ public class TextureEntryList {
         this.highlight = location;
     }
 
+    public void selectLocation(ResourceLocation location) {
+        int index = location == null ? -1 : this.items.indexOf(location);
+        this.selected = index;
+        if (index >= 0) {
+            float top = index * ROW_H;
+            float bottom = top + ROW_H;
+            float contentH = this.h - 2;
+            if (top < this.scroll) {
+                this.scroll = top;
+            } else if (bottom > this.scroll + contentH) {
+                this.scroll = bottom - contentH;
+            }
+            this.scroll = clampScroll(this.scroll);
+        }
+    }
+
     public void setItems(List<ResourceLocation> locations) {
         this.items.clear();
         if (locations != null) {
@@ -134,7 +150,7 @@ public class TextureEntryList {
         for (int i = first; i < last; i++) {
             int rowY = contentY + (int) (i * ROW_H - this.scroll);
             int rowBottom = Math.min(rowY + ROW_H, contentY + contentH);
-            if (rowY >= contentY + contentH) {
+            if (rowY + ROW_H > contentY + contentH) {
                 break;
             }
             boolean dragging = this.swipeEnabled && i == this.dragIndex
@@ -181,11 +197,11 @@ public class TextureEntryList {
                     contentX + 27 + offset, rowY + 1, 24, true);
             } else if (slots == CAPE_SLICES.length) {
                 for (int s = 0; s < CAPE_SLICES.length; s++) {
-                    drawSlice(graphics, contentX + 1 + s * 26 + offset, rowY + 1,
+                    drawSlice(graphics, this.font, contentX + 1 + s * 26 + offset, rowY + 1,
                         location, CAPE_SLICES[s]);
                 }
             } else {
-                drawThumb(graphics, contentX + 1 + offset, rowY + 1, location);
+                drawThumb(graphics, this.font, contentX + 1 + offset, rowY + 1, location);
             }
             int nameX = contentX + 1 + slots * 26 + offset;
             int nameW = contentX + rowW - 3 - nameX;
@@ -343,7 +359,7 @@ public class TextureEntryList {
         this.scroll = clampScroll((float) (fraction * max));
     }
 
-    private void drawSlotFrame(GuiGraphics graphics, int sx, int sy) {
+    static void drawSlotFrame(GuiGraphics graphics, int sx, int sy) {
         int size = 24;
         graphics.fill(sx, sy, sx + size, sy + size, 0xFF3A3A3A);
         for (int row = 0; row < 5; row++) {
@@ -354,7 +370,7 @@ public class TextureEntryList {
         }
     }
 
-    private void drawThumb(GuiGraphics graphics, int sx, int sy, ResourceLocation location) {
+    static void drawThumb(GuiGraphics graphics, Font font, int sx, int sy, ResourceLocation location) {
         int size = 24;
         drawSlotFrame(graphics, sx, sy);
         if (location == null) {
@@ -362,11 +378,11 @@ public class TextureEntryList {
         }
         TexturePreviewLoader.Preview preview = TexturePreviewLoader.peek(location);
         if (preview == null) {
-            graphics.drawCenteredString(this.font, "...", sx + size / 2, sy + 9, 0xFFFFFFFF);
+            graphics.drawCenteredString(font, "...", sx + size / 2, sy + 9, 0xFFFFFFFF);
             return;
         }
         if (preview.failed() || preview.front() == null) {
-            graphics.drawCenteredString(this.font, "无", sx + size / 2, sy + 9, 0xFFFFFFFF);
+            graphics.drawCenteredString(font, "无", sx + size / 2, sy + 9, 0xFFFFFFFF);
             return;
         }
         int texWidth = preview.width();
@@ -378,7 +394,7 @@ public class TextureEntryList {
             drawWidth, drawHeight, 0.0F, 0.0F, texWidth, texHeight, texWidth, texHeight);
     }
 
-    private void drawSlice(GuiGraphics graphics, int sx, int sy, ResourceLocation location, int[] slice) {
+    static void drawSlice(GuiGraphics graphics, Font font, int sx, int sy, ResourceLocation location, int[] slice) {
         int size = 24;
         drawSlotFrame(graphics, sx, sy);
         if (location == null) {
@@ -386,11 +402,11 @@ public class TextureEntryList {
         }
         TexturePreviewLoader.Preview preview = TexturePreviewLoader.peek(location);
         if (preview == null) {
-            graphics.drawCenteredString(this.font, "...", sx + size / 2, sy + 9, 0xFFFFFFFF);
+            graphics.drawCenteredString(font, "...", sx + size / 2, sy + 9, 0xFFFFFFFF);
             return;
         }
         if (preview.failed() || preview.front() == null) {
-            graphics.drawCenteredString(this.font, "无", sx + size / 2, sy + 9, 0xFFFFFFFF);
+            graphics.drawCenteredString(font, "无", sx + size / 2, sy + 9, 0xFFFFFFFF);
             return;
         }
         int sliceWidth = slice[2];

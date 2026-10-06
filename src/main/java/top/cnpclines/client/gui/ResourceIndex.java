@@ -482,6 +482,7 @@ public final class ResourceIndex {
             }
             result.add(rest.substring(0, slash));
         }
+        result.sort(ResourceIndex::naturalCompare);
         return result;
     }
 
@@ -502,6 +503,112 @@ public final class ResourceIndex {
             }
             result.add(entry.getValue());
         }
+        result.sort(ResourceIndex::compareDisplay);
         return result;
+    }
+
+    public static List<ResourceLocation> search(String root, String query) {
+        List<ResourceLocation> result = new ArrayList<>();
+        String q = Pinyin.normalizeQuery(query);
+        if (q.isEmpty()) {
+            return result;
+        }
+        for (Map.Entry<String, TreeMap<String, ResourceLocation>> nsEntry : FILES.entrySet()) {
+            for (Map.Entry<String, ResourceLocation> entry : nsEntry.getValue().entrySet()) {
+                String path = entry.getKey();
+                if (root != null && !root.isEmpty() && !path.startsWith(root)) {
+                    continue;
+                }
+                if (matches(q, path)) {
+                    result.add(entry.getValue());
+                }
+            }
+        }
+        result.sort(ResourceIndex::compareDisplay);
+        return result;
+    }
+
+    private static boolean matches(String q, String path) {
+        String name = path.substring(path.lastIndexOf('/') + 1).toLowerCase(Locale.ROOT);
+        if (Pinyin.fuzzy(q, name)) {
+            return true;
+        }
+        if (Pinyin.fuzzy(q, Pinyin.of(name))) {
+            return true;
+        }
+        String full = path.toLowerCase(Locale.ROOT);
+        if (Pinyin.fuzzy(q, full)) {
+            return true;
+        }
+        return Pinyin.fuzzy(q, Pinyin.of(full));
+    }
+
+    private static int compareDisplay(ResourceLocation a, ResourceLocation b) {
+        String left = displayName(a);
+        String right = displayName(b);
+        int cmp = naturalCompare(left, right);
+        return cmp != 0 ? cmp : left.compareTo(right);
+    }
+
+    private static int naturalCompare(String left, String right) {
+        int i = 0;
+        int j = 0;
+        while (i < left.length() && j < right.length()) {
+            char ca = left.charAt(i);
+            char cb = right.charAt(j);
+            if (Character.isDigit(ca) && Character.isDigit(cb)) {
+                int osi = i;
+                int osj = j;
+                while (i < left.length() && Character.isDigit(left.charAt(i))) {
+                    i++;
+                }
+                while (j < right.length() && Character.isDigit(right.charAt(j))) {
+                    j++;
+                }
+                int si = osi;
+                int sj = osj;
+                while (si < i - 1 && left.charAt(si) == '0') {
+                    si++;
+                }
+                while (sj < j - 1 && right.charAt(sj) == '0') {
+                    sj++;
+                }
+                int lenA = i - si;
+                int lenB = j - sj;
+                if (lenA != lenB) {
+                    return lenA - lenB;
+                }
+                for (int k = 0; k < lenA; k++) {
+                    char xa = left.charAt(si + k);
+                    char xb = right.charAt(sj + k);
+                    if (xa != xb) {
+                        return xa - xb;
+                    }
+                }
+                int rawA = i - osi;
+                int rawB = j - osj;
+                if (rawA != rawB) {
+                    return rawA - rawB;
+                }
+                continue;
+            }
+            char la = Character.toLowerCase(ca);
+            char lb = Character.toLowerCase(cb);
+            if (la != lb) {
+                return la - lb;
+            }
+            if (ca != cb) {
+                return ca - cb;
+            }
+            i++;
+            j++;
+        }
+        return (left.length() - i) - (right.length() - j);
+    }
+
+    private static String displayName(ResourceLocation location) {
+        String original = toOriginal(location.getNamespace(), location.getPath());
+        int slash = original.lastIndexOf('/');
+        return slash < 0 ? original : original.substring(slash + 1);
     }
 }

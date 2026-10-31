@@ -7,8 +7,10 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import noppes.npcs.client.EntityUtil;
 import noppes.npcs.client.gui.custom.components.CustomGuiEntityDisplay;
 import noppes.npcs.client.gui.mainmenu.GuiNpcDisplay;
+import noppes.npcs.entity.EntityCustomNpc;
 import noppes.npcs.entity.EntityNPCInterface;
 import noppes.npcs.entity.data.DataDisplay;
 import noppes.npcs.shared.client.gui.components.GuiSliderNop;
@@ -674,9 +676,13 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
     }
 
     private void drawNpc(GuiGraphics graphics, int x, int y, float zoom, int angle, int mouseX, int mouseY) {
-        // CNPC copies this cache to its model NPC before the renderer resolves the skin.
+        // Resolve the skin before copying it to CNPC's model NPC; tick-only copies miss previews.
         if (this.npc.textureLocation == null) {
             this.minecraft.getEntityRenderDispatcher().getRenderer(this.npc).getTextureLocation(this.npc);
+        }
+        if (this.npc instanceof EntityCustomNpc customNpc
+            && customNpc.modelData.getEntity(this.npc) instanceof EntityNPCInterface modelNpc) {
+            EntityUtil.Copy(this.npc, modelNpc);
         }
         CustomGuiEntityDisplay.drawEntity(graphics, this.npc, x, y, zoom, angle, 0, 0,
             0f, 0f, false);

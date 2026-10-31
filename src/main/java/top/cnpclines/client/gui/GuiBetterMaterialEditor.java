@@ -18,7 +18,9 @@ import noppes.npcs.entity.EntityNPCInterface;
 import noppes.npcs.entity.EntityCustomNpc;
 import noppes.npcs.entity.EntityNPC64x32;
 import noppes.npcs.client.model.ModelPlayerAlt;
+import noppes.npcs.client.EntityUtil;
 import noppes.npcs.client.renderer.RenderCustomNpc;
+import noppes.npcs.client.renderer.RenderNPCInterface;
 import noppes.npcs.client.layer.LayerPreRender;
 import noppes.npcs.entity.data.DataDisplay;
 import org.lwjgl.input.Keyboard;
@@ -760,11 +762,22 @@ public class GuiBetterMaterialEditor extends GuiScreen implements ISliderListene
         this.parent.mouseY = absY - (int) (50.0f * scale * zoom);
         int relX = absX - this.parent.guiLeft;
         int relY = absY - this.parent.guiTop;
+        RenderManager manager = this.mc.getRenderManager();
+        // Resolve before Copy: CNPC model NPCs otherwise keep tick-old skins in previews.
+        if (this.npc.textureLocation == null) {
+            Render renderer = manager.getEntityRenderObject(this.npc);
+            if (renderer instanceof RenderNPCInterface) {
+                ((RenderNPCInterface) renderer).getEntityTexture(this.npc);
+            }
+        }
         EntityNPCInterface modelNpc = this.npc;
         if (this.npc instanceof EntityCustomNpc) {
             net.minecraft.entity.EntityLivingBase modelEntity = ((EntityCustomNpc) this.npc).modelData.getEntity(this.npc);
             if (modelEntity != null) {
                 modelNpc = modelEntity instanceof EntityNPCInterface ? (EntityNPCInterface) modelEntity : null;
+                if (modelNpc != null) {
+                    EntityUtil.Copy(this.npc, modelNpc);
+                }
             }
         }
         TexturePreviewLoader.Preview skin = modelNpc instanceof EntityNPC64x32
@@ -773,7 +786,6 @@ public class GuiBetterMaterialEditor extends GuiScreen implements ISliderListene
             this.parent.drawNpc(this.npc, relX, relY, zoom, angle);
             return;
         }
-        RenderManager manager = this.mc.getRenderManager();
         Class<? extends net.minecraft.entity.Entity> modelClass = modelNpc.getClass();
         Render<? extends net.minecraft.entity.Entity> original = manager.entityRenderMap.get(modelClass);
         if (this.modernSkinPreview == null) {

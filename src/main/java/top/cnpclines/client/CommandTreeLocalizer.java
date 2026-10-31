@@ -5,9 +5,9 @@ import com.mojang.brigadier.tree.CommandNode;
 import com.mojang.logging.LogUtils;
 import java.lang.reflect.Field;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderGuiEvent;
 import net.minecraftforge.event.TickEvent;
@@ -19,26 +19,16 @@ import top.cnpclines.CNPCLines;
 @Mod.EventBusSubscriber(modid = CNPCLines.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class CommandTreeLocalizer {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final Map<String, String> EN_TO_ZH = new HashMap<>();
-    private static final Map<String, String> ZH_TO_EN = new HashMap<>();
-
-    static {
-        EN_TO_ZH.put("player", "玩家");
-        EN_TO_ZH.put("message", "消息");
-        EN_TO_ZH.put("name", "名字");
-        EN_TO_ZH.put("color", "颜色");
-        EN_TO_ZH.put("maxSymbolsFirstLine", "首行最大字符数");
-        EN_TO_ZH.put("maxSymbolsOtherLines", "其余行最大字符数");
-        EN_TO_ZH.put("icon", "图标");
-        for (Map.Entry<String, String> entry : EN_TO_ZH.entrySet()) {
-            ZH_TO_EN.put(entry.getValue(), entry.getKey());
-        }
-    }
+    private static final String[] ARGS = {
+        "player", "message", "name", "color",
+        "maxSymbolsFirstLine", "maxSymbolsOtherLines", "icon"
+    };
+    private static final Map<String, String> VALUE_TO_EN = new HashMap<>();
 
     private static Field nameField;
     private static boolean renameFailed;
     private static CommandNode<?> processedTop;
-    private static boolean processedChinese;
+    private static String processedLang;
 
     private CommandTreeLocalizer() {
     }
@@ -69,34 +59,41 @@ public final class CommandTreeLocalizer {
             processedTop = null;
             return;
         }
-        String gameLanguage = minecraft.getLanguageManager().getSelected();
-        String systemLanguage = Locale.getDefault().getLanguage();
-        boolean chinese = gameLanguage.startsWith("zh") || "zh".equals(systemLanguage);
-        if (top == processedTop && chinese == processedChinese) {
+        String lang = minecraft.getLanguageManager().getSelected();
+        if (top == processedTop && lang.equals(processedLang)) {
             return;
         }
-        int renamed = renameSubtree(top, chinese);
-        LOGGER.info(
-            "[cnpclines] command tree localize: gameLang={}, systemLang={}, chinese={}, renamedNodes={}, effective={}",
-            gameLanguage, systemLanguage, chinese, renamed, renamed > 0 || !chinese
-        );
+        renameSubtree(top);
         processedTop = top;
-        processedChinese = chinese;
+        processedLang = lang;
     }
 
-    private static int renameSubtree(CommandNode<?> node, boolean chinese) {
-        int renamed = 0;
+    private static void renameSubtree(CommandNode<?> node) {
         if (node instanceof ArgumentCommandNode<?, ?> argumentNode) {
             String current = argumentNode.getName();
-            String target = chinese ? EN_TO_ZH.get(current) : ZH_TO_EN.get(current);
-            if (target != null && rename(argumentNode, target)) {
-                renamed++;
+            String en = enName(current);
+            if (en != null) {
+                String target = I18n.get("cnpclines.arg." + en);
+                if (target.isEmpty() || target.equals("cnpclines.arg." + en)) {
+                    target = en;
+                }
+                if (!target.equals(current) && rename(argumentNode, target)) {
+                    VALUE_TO_EN.put(target, en);
+                }
             }
         }
         for (CommandNode<?> child : node.getChildren()) {
-            renamed += renameSubtree(child, chinese);
+            renameSubtree(child);
         }
-        return renamed;
+    }
+
+    private static String enName(String current) {
+        for (String arg : ARGS) {
+            if (arg.equals(current)) {
+                return arg;
+            }
+        }
+        return VALUE_TO_EN.get(current);
     }
 
     private static boolean rename(ArgumentCommandNode<?, ?> node, String newName) {
@@ -105,14 +102,12 @@ public final class CommandTreeLocalizer {
                 nameField = ArgumentCommandNode.class.getDeclaredField("name");
                 nameField.setAccessible(true);
             }
-            String oldName = node.getName();
             nameField.set(node, newName);
             if (!newName.equals(node.getName())) {
                 renameFailed = true;
                 LOGGER.error("[cnpclines] rename to {} not effective, current={}", newName, node.getName());
                 return false;
             }
-            LOGGER.info("[cnpclines] renamed command argument {} -> {}", oldName, newName);
             return true;
         } catch (ReflectiveOperationException | RuntimeException e) {
             renameFailed = true;

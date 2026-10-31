@@ -2,6 +2,7 @@ package top.cnpclines.client.gui;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.resources.language.I18n;
 import noppes.npcs.shared.client.gui.components.GuiButtonNop;
 import noppes.npcs.shared.client.gui.listeners.IGuiInterface;
 
@@ -16,7 +17,7 @@ public class BetterMaterialButton extends GuiButtonNop {
         super.renderWidget(graphics, mouseX, mouseY, partialTick);
         int color = this.active ? (this.isHovered() ? 0xFFFFA0 : 0xFFFFFF) : 0xA0A0A0;
         int centerX = this.getX() + this.getWidth() / 2;
-        graphics.drawCenteredString(Minecraft.getInstance().font, "更好的材质", centerX, this.getY() + 11, color);
-        graphics.drawCenteredString(Minecraft.getInstance().font, "编辑", centerX, this.getY() + 23, color);
+        graphics.drawCenteredString(Minecraft.getInstance().font, I18n.get("cnpclines.button.title"), centerX, this.getY() + 11, color);
+        graphics.drawCenteredString(Minecraft.getInstance().font, I18n.get("cnpclines.button.edit"), centerX, this.getY() + 23, color);
     }
 }

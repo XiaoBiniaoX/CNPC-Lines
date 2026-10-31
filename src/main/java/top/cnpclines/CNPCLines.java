@@ -6,12 +6,15 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.RegisterEvent;
 import top.cnpclines.command.BinnpclinesCommand;
 import top.cnpclines.command.UnquotedStringArgument;
+import top.cnpclines.config.ClientConfig;
 import top.cnpclines.network.NetworkHandler;
 
 @Mod(CNPCLines.MOD_ID)
@@ -19,7 +22,9 @@ public class CNPCLines {
     public static final String MOD_ID = "cnpclines";
 
     public CNPCLines() {
+        ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);
         MinecraftForge.EVENT_BUS.register(this);
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(ClientConfig::onConfigChanged);
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::commonSetup);
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::onRegisterArgumentType);
     }

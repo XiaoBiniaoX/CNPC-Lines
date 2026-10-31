@@ -7,14 +7,12 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import noppes.npcs.entity.EntityNPCInterface;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import top.cnpclines.CNPCLines;
+import top.cnpclines.config.ClientConfig;
 import top.cnpclines.network.OpenCustomBarOverlayPacket;
 
 @Mod.EventBusSubscriber(modid = CNPCLines.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class NpcLineQueue {
-    private static final Logger LOGGER = LogManager.getLogger(CNPCLines.MOD_ID);
     private static final long DISPLAY_LAST_MS = 5000L;
     private static final long DISPLAY_SHORT_MS = 1000L;
     private static final long FADE_MS = 700L;
@@ -30,9 +28,11 @@ public final class NpcLineQueue {
     }
 
     public static synchronized void enqueue(String text, EntityNPCInterface npc) {
+        if (!ClientConfig.replaceNpcLines) {
+            return;
+        }
         String name = npc.m_7755_().getString();
         queue.addLast(new Entry(text, name, npc, System.currentTimeMillis()));
-        LOGGER.info("[cnpclines] NPC line queued: {}", text);
     }
 
     @SubscribeEvent
@@ -41,6 +41,13 @@ public final class NpcLineQueue {
             return;
         }
         NpcSkinIcon.drain();
+        if (!ClientConfig.replaceNpcLines) {
+            queue.clear();
+            showing = false;
+            fading = false;
+            ClientMessageOverlay.clearNpc();
+            return;
+        }
         long now = System.currentTimeMillis();
         if (!showing) {
             if (!queue.isEmpty()) {
@@ -51,15 +58,13 @@ public final class NpcLineQueue {
         if (!fading) {
             long displayLimit = queue.isEmpty() ? DISPLAY_LAST_MS : DISPLAY_SHORT_MS;
             if (now - showStart >= displayLimit) {
-                HudOverlayManager.fadeOutAll((int) FADE_MS);
+                ClientMessageOverlay.fadeOutNpc((int) FADE_MS);
                 fading = true;
                 fadeStart = now;
-                LOGGER.info("[cnpclines] line fade-start queue={}", queue.size());
             }
         } else if (now - fadeStart >= FADE_MS) {
             showing = false;
             fading = false;
-            LOGGER.info("[cnpclines] line fade-end queue={}", queue.size());
             if (!queue.isEmpty()) {
                 showNext(now);
             }
@@ -77,10 +82,8 @@ public final class NpcLineQueue {
             return;
         }
         queue.poll();
-        LOGGER.info("[cnpclines] line show: {}", entry.text);
-        ClientMessageOverlay.show(
-            new OpenCustomBarOverlayPacket(entry.text, entry.name, "#FFFFFF", icon, 32, 40),
-            0L
+        ClientMessageOverlay.showNpc(
+            new OpenCustomBarOverlayPacket(entry.text, entry.name, "#FFFFFF", icon, 32, 40)
         );
         showing = true;
         fading = false;

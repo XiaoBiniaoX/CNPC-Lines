@@ -5,13 +5,11 @@ import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import top.cnpclines.network.OpenCustomBarOverlayPacket;
 
 public final class ClientMessageOverlay {
-    private static final Logger LOGGER = LogManager.getLogger("cnpclines");
     private static final String ICONS = "cnpclines:textures/overlay/message/icons/";
+    private static boolean npcOverlay = false;
 
     private ClientMessageOverlay() {
     }
@@ -20,13 +18,34 @@ public final class ClientMessageOverlay {
         show(packet, 10000L);
     }
 
-    public static void show(OpenCustomBarOverlayPacket packet, long displayMillis) {
-        Font font = Minecraft.getInstance().font;
-        LOGGER.info("[cnpclines] overlay show: displayMillis={}, icon={}", displayMillis, packet.getIcon());
+    public static void showNpc(OpenCustomBarOverlayPacket packet) {
+        show(packet, 0L);
+        npcOverlay = true;
+    }
 
+    public static void clearNpc() {
+        if (npcOverlay) {
+            clear();
+        }
+    }
+
+    public static void fadeOutNpc(int durationMillis) {
+        if (npcOverlay) {
+            HudOverlayManager.fadeOutAll(durationMillis);
+        }
+    }
+
+    private static void clear() {
         for (int i = 0; i < 500; i++) {
             HudOverlayManager.removeComponent(i);
         }
+        npcOverlay = false;
+    }
+
+    public static void show(OpenCustomBarOverlayPacket packet, long displayMillis) {
+        Font font = Minecraft.getInstance().font;
+
+        clear();
 
         String name = packet.getName();
         String coloredName = "[" + name + "]§f:";

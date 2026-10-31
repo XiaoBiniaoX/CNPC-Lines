@@ -7,7 +7,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -16,15 +15,11 @@ import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 public final class HudOverlayManager {
-    private static final Logger LOGGER = LogManager.getLogger("cnpclines");
     private static final int FADE_MS = 700;
     private static final int FADE_IN_MS = 300;
     private static final int SLIDE_PX = 20;
-    private static final Set<String> LOGGED_ICONS = new java.util.HashSet<>();
     private static final Map<Integer, HudText> overlays = new HashMap<>();
     private static final Map<Integer, HudIcon> icons = new HashMap<>();
     private static final Map<Integer, HudBackground> backgrounds = new HashMap<>();
@@ -97,9 +92,6 @@ public final class HudOverlayManager {
         for (int id : componentsToRemove) {
             removeComponent(id);
         }
-        if (!componentsToRemove.isEmpty()) {
-            LOGGER.info("[cnpclines] overlay expire: {}", componentsToRemove);
-        }
 
         Font font = Minecraft.getInstance().font;
 
@@ -131,10 +123,6 @@ public final class HudOverlayManager {
             RenderSystem.defaultBlendFunc();
             RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, alpha / 255.0F);
             int[] iconSize = textureSize(icon.texture);
-            if (LOGGED_ICONS.add(icon.texture.toString())) {
-                LOGGER.info("[cnpclines] icon render: tex={}, size={}x{}, scale={}, final={}px",
-                    icon.texture, iconSize[0], iconSize[1], icon.scale, icon.scale * 16.0F);
-            }
             guiGraphics.pose().pushPose();
             guiGraphics.pose().translate((double) icon.x, (double) (icon.y + slide), 0.0D);
             guiGraphics.pose().scale(icon.scale * 16.0F / iconSize[0], icon.scale * 16.0F / iconSize[1], 1.0F);

@@ -5,6 +5,7 @@ import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.Gui;
+import net.minecraft.client.resources.I18n;
 import net.minecraft.util.ResourceLocation;
 
 public class TextureEntryList {
@@ -133,7 +134,7 @@ public class TextureEntryList {
         int current = this.highlight == null ? -1 : this.items.indexOf(this.highlight);
 
         if (this.items.isEmpty()) {
-            String empty = "（暂无文件）";
+            String empty = I18n.format("cnpclines.list.empty");
             this.font.drawString(empty,
                 contentX + rowW / 2 - this.font.getStringWidth(empty) / 2,
                 contentY + contentH / 2 - 4, 0xFF909090);
@@ -383,7 +384,8 @@ public class TextureEntryList {
             return;
         }
         if (preview.failed() || preview.front() == null) {
-            font.drawString("无", sx + size / 2 - font.getStringWidth("无") / 2, sy + 9, 0xFFFFFFFF);
+            String none = I18n.format("cnpclines.list.none");
+            font.drawString(none, sx + size / 2 - font.getStringWidth(none) / 2, sy + 9, 0xFFFFFFFF);
             return;
         }
         int texWidth = preview.width();
@@ -408,7 +410,8 @@ public class TextureEntryList {
             return;
         }
         if (preview.failed() || preview.front() == null) {
-            font.drawString("无", sx + size / 2 - font.getStringWidth("无") / 2, sy + 9, 0xFFFFFFFF);
+            String none = I18n.format("cnpclines.list.none");
+            font.drawString(none, sx + size / 2 - font.getStringWidth(none) / 2, sy + 9, 0xFFFFFFFF);
             return;
         }
         int sliceWidth = slice[2];

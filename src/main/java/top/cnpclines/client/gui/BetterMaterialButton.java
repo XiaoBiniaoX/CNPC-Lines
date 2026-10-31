@@ -4,6 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.resources.I18n;
 import noppes.npcs.client.gui.util.GuiNpcButton;
 
 public class BetterMaterialButton extends GuiNpcButton {
@@ -31,8 +32,8 @@ public class BetterMaterialButton extends GuiNpcButton {
         int color = this.enabled ? (this.hovered ? 0xFFFFA0 : 0xFFFFFF) : 0xA0A0A0;
         int centerX = this.x + this.width / 2;
         FontRenderer font = mc.fontRenderer;
-        String line1 = "更好的材质";
-        String line2 = "编辑";
+        String line1 = I18n.format("cnpclines.button.material1");
+        String line2 = I18n.format("cnpclines.button.material2");
         font.drawString(line1, centerX - font.getStringWidth(line1) / 2, this.y + 11, color);
         font.drawString(line2, centerX - font.getStringWidth(line2) / 2, this.y + 23, color);
     }

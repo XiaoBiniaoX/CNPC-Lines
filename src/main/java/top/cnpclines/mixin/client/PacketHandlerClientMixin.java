@@ -14,6 +14,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import top.cnpclines.client.NpcLineQueue;
+import top.cnpclines.client.ClientConfig;
 
 @Mixin(value = PacketHandlerClient.class, remap = false)
 public class PacketHandlerClientMixin {
@@ -24,7 +25,7 @@ public class PacketHandlerClientMixin {
         cancellable = true
     )
     private void cnpclines$rerouteChatBubble(ByteBuf buffer, EntityPlayer player, EnumPacketClient type, CallbackInfo ci) {
-        if (type != EnumPacketClient.CHATBUBBLE) {
+        if (type != EnumPacketClient.CHATBUBBLE || !ClientConfig.customNpcLinesEnabled()) {
             return;
         }
         try {

@@ -3,6 +3,7 @@ package top.cnpclines.client.gui;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.gui.FontRenderer;
+import net.minecraft.client.resources.I18n;
 import net.minecraft.util.ResourceLocation;
 import top.cnpclines.client.CustomSkinsPack;
 
@@ -123,7 +124,7 @@ public class EntryTreeView {
             String path = pathOf(this.currentDir);
             String parent = parentOf(this.currentDir);
             if (parent != null && !parent.equals(this.currentDir) && exists(parent)) {
-                this.rows.add(new Row(T_UP, "↑ 上一级", parent));
+                this.rows.add(new Row(T_UP, I18n.format("cnpclines.tree.up"), parent));
             }
             for (String name : ResourceIndex.children(ns, path)) {
                 this.rows.add(new Row(T_DIR, name + "/", ns + ":" + path + name + "/"));
@@ -145,7 +146,7 @@ public class EntryTreeView {
         this.scroll = clampScroll(this.scroll);
 
         if (this.rows.isEmpty()) {
-            String empty = "（空）";
+            String empty = I18n.format("cnpclines.tree.empty");
             this.font.drawString(empty,
                 contentX + rowW / 2 - this.font.getStringWidth(empty) / 2,
                 contentY + contentH / 2 - 4, 0xFF909090);
@@ -336,7 +337,7 @@ public class EntryTreeView {
 
     static String displayPath(String id) {
         if (id == null || id.isEmpty()) {
-            return "全部命名空间";
+            return I18n.format("cnpclines.tree.all_ns");
         }
         int colon = id.indexOf(':');
         if (colon < 0) {

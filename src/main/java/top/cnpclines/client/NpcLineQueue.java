@@ -2,6 +2,8 @@ package top.cnpclines.client;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import net.minecraft.client.Minecraft;
+import net.minecraftforge.fml.client.config.GuiConfig;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import noppes.npcs.entity.EntityNPCInterface;
 import org.apache.logging.log4j.LogManager;
@@ -21,14 +23,27 @@ public final class NpcLineQueue {
     private static boolean fading = false;
     private static long showStart = 0L;
     private static long fadeStart = 0L;
+    private static int overlayGeneration;
 
     private NpcLineQueue() {
     }
 
     public static synchronized void enqueue(String text, EntityNPCInterface npc) {
+        if (!ClientConfig.customNpcLinesEnabled()) {
+            return;
+        }
         String name = npc.getName();
         queue.addLast(new Entry(text, name, npc, System.currentTimeMillis()));
         LOGGER.info("[cnpclines] NPC line queued: {}", text);
+    }
+
+    public static synchronized void clear() {
+        queue.clear();
+        if (showing && overlayGeneration == ClientMessageOverlay.generation()) {
+            ClientMessageOverlay.clear();
+        }
+        showing = false;
+        fading = false;
     }
 
     @SubscribeEvent
@@ -36,7 +51,18 @@ public final class NpcLineQueue {
         if (event.phase != net.minecraftforge.fml.common.gameevent.TickEvent.Phase.END) {
             return;
         }
+        if (!(Minecraft.getMinecraft().currentScreen instanceof GuiConfig)) {
+            ClientConfig.reloadIfChanged();
+        }
+        if (!ClientConfig.customNpcLinesEnabled()) {
+            clear();
+            return;
+        }
         NpcSkinIcon.drain();
+        if (showing && overlayGeneration != ClientMessageOverlay.generation()) {
+            showing = false;
+            fading = false;
+        }
         long now = System.currentTimeMillis();
         if (!showing) {
             if (!queue.isEmpty()) {
@@ -78,6 +104,7 @@ public final class NpcLineQueue {
             new OpenCustomBarOverlayPacket(entry.text, entry.name, "#FFFFFF", icon, 32, 40),
             0L
         );
+        overlayGeneration = ClientMessageOverlay.generation();
         showing = true;
         fading = false;
         showStart = now;

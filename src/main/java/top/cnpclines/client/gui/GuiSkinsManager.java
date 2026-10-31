@@ -10,6 +10,7 @@ import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.GuiTextField;
+import net.minecraft.client.resources.I18n;
 import net.minecraft.init.SoundEvents;
 import net.minecraft.util.ResourceLocation;
 import org.apache.logging.log4j.LogManager;
@@ -34,7 +35,9 @@ public class GuiSkinsManager extends GuiScreen {
     private static final int COL_DIVIDER = 0xFF808080;
     private static final int COL_TAB_OFF = 0xFFA0A0A0;
 
-    private static final String[] TAB_NAMES = {"皮肤", "披风", "附加材质"};
+    private static final String[] TAB_KEYS = {
+        "cnpclines.tab.skins", "cnpclines.tab.cloak", "cnpclines.tab.overlays",
+    };
     private static final ResourceLocation[] TAB_ICONS = {
         new ResourceLocation("cnpclines", "textures/overlay/message/icons/skins.png"),
         new ResourceLocation("cnpclines", "textures/overlay/message/icons/cloak.png"),
@@ -146,17 +149,23 @@ public class GuiSkinsManager extends GuiScreen {
         refreshList();
         refreshSearch();
 
-        this.buttonList.add(new GuiButton(BTN_CREATE, this.guiLeft + 316, this.guiTop + 20, 98, 18, "新建文件夹"));
-        this.buttonList.add(new GuiButton(BTN_RENAME, this.guiLeft + 316, this.guiTop + 41, 98, 18, "重命名"));
-        this.deleteButton = new GuiButton(BTN_DELETE, this.guiLeft + 316, this.guiTop + 62, 98, 18, "删除");
+        this.buttonList.add(new GuiButton(BTN_CREATE, this.guiLeft + 316, this.guiTop + 20, 98, 18,
+            I18n.format("cnpclines.manager.new_folder")));
+        this.buttonList.add(new GuiButton(BTN_RENAME, this.guiLeft + 316, this.guiTop + 41, 98, 18,
+            I18n.format("cnpclines.manager.rename")));
+        this.deleteButton = new GuiButton(BTN_DELETE, this.guiLeft + 316, this.guiTop + 62, 98, 18,
+            I18n.format("cnpclines.manager.delete"));
         this.buttonList.add(this.deleteButton);
 
         this.nameBox = new GuiTextField(0, this.fontRenderer, this.guiLeft + 316, this.guiTop + 84, 66, 18);
         this.nameBox.setMaxStringLength(32);
 
-        this.buttonList.add(new GuiButton(BTN_OK, this.guiLeft + 384, this.guiTop + 84, 30, 18, "确定"));
-        this.buttonList.add(new GuiButton(BTN_IMPORT, this.guiLeft + 316, this.guiTop + 150, 98, 18, "导入PNG..."));
-        this.buttonList.add(new GuiButton(BTN_BACK, this.guiLeft + 350, this.guiTop + 206, 64, 20, "返回"));
+        this.buttonList.add(new GuiButton(BTN_OK, this.guiLeft + 384, this.guiTop + 84, 30, 18,
+            I18n.format("cnpclines.manager.ok")));
+        this.buttonList.add(new GuiButton(BTN_IMPORT, this.guiLeft + 316, this.guiTop + 150, 98, 18,
+            I18n.format("cnpclines.manager.import")));
+        this.buttonList.add(new GuiButton(BTN_BACK, this.guiLeft + 350, this.guiTop + 206, 64, 20,
+            I18n.format("cnpclines.manager.back")));
     }
 
     private void refreshList() {
@@ -218,7 +227,7 @@ public class GuiSkinsManager extends GuiScreen {
         this.tree.restoreSelection(dirId);
         refreshList();
         this.list.setSelected(location);
-        this.status = "已定位 " + EntryTreeView.displayPath(dirId);
+        this.status = I18n.format("cnpclines.status.located", EntryTreeView.displayPath(dirId));
         playClick();
     }
 
@@ -258,7 +267,7 @@ public class GuiSkinsManager extends GuiScreen {
         }
         this.searchBox.drawTextBox();
         if (this.searchBox.getText().isEmpty()) {
-            this.fontRenderer.drawString("搜索皮肤：文件名 / 拼音 / 首字母（如 hs → 红色）",
+            this.fontRenderer.drawString(I18n.format("cnpclines.search.hint"),
                 this.searchBox.x + 3, this.searchBox.y + 4, 0xFF909090);
         }
     }
@@ -277,16 +286,16 @@ public class GuiSkinsManager extends GuiScreen {
     private void drawTooltips(int mouseX, int mouseY) {
         String tip = null;
         if (inside(this.deleteButton, mouseX, mouseY)) {
-            tip = "删除左侧选中的文件夹或右侧选中的条目（需二次确认）\n仅删除本资源包内的文件";
+            tip = I18n.format("cnpclines.tip.delete");
         } else if (mouseOverButton(BTN_CREATE, mouseX, mouseY)) {
-            tip = "在当前文件夹内新建子文件夹\n名称只能使用小写字母、数字、下划线";
+            tip = I18n.format("cnpclines.tip.create");
         } else if (mouseOverButton(BTN_RENAME, mouseX, mouseY)) {
-            tip = "重命名当前文件夹\n名称只能使用小写字母、数字、下划线\n仅对本资源包内的文件夹生效";
+            tip = I18n.format("cnpclines.tip.rename");
         } else if (mouseOverButton(BTN_IMPORT, mouseX, mouseY)) {
-            tip = "打开系统文件选择框，批量导入 PNG\n导入到当前文件夹（仅本资源包）";
+            tip = I18n.format("cnpclines.tip.import");
         }
         if (tip != null) {
-            this.drawHoveringText(Arrays.asList(tip.split("\n")), mouseX, mouseY);
+            this.drawHoveringText(Arrays.asList(tip.split("\\n")), mouseX, mouseY);
         }
     }
 
@@ -400,12 +409,12 @@ public class GuiSkinsManager extends GuiScreen {
         String dir = EntryTreeView.pathOf(id);
         if (!CustomSkinsPack.NAMESPACE.equals(EntryTreeView.nsOf(id))
             || dir == null || dir.isEmpty()) {
-            this.status = "该文件夹来自其他资源包，无法导入";
+            this.status = I18n.format("cnpclines.status.other_pack_import");
             return;
         }
         String clipboard = GuiScreen.getClipboardString();
         if (clipboard == null || clipboard.trim().isEmpty()) {
-            this.status = "剪贴板为空（复制 PNG 文件后 Ctrl+V）";
+            this.status = I18n.format("cnpclines.status.clipboard_empty");
             return;
         }
         List<Path> paths = new ArrayList<>();
@@ -433,7 +442,7 @@ public class GuiSkinsManager extends GuiScreen {
             return;
         }
         this.importDialogOpen = true;
-        this.status = "正在打开文件选择框…";
+        this.status = I18n.format("cnpclines.status.opening_dialog");
         LOGGER.info("import dialog: opening JFileChooser");
         javax.swing.SwingUtilities.invokeLater(() -> {
             try {
@@ -446,12 +455,12 @@ public class GuiSkinsManager extends GuiScreen {
                         return dialog;
                     }
                 };
-                chooser.setDialogTitle("导入 PNG 皮肤");
+                chooser.setDialogTitle(I18n.format("cnpclines.import.dialog_title"));
                 chooser.setMultiSelectionEnabled(true);
                 chooser.setFileSelectionMode(javax.swing.JFileChooser.FILES_ONLY);
                 chooser.setAcceptAllFileFilterUsed(false);
                 chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
-                    "PNG 图片 (*.png)", "png"));
+                    I18n.format("cnpclines.import.filter"), "png"));
                 int result = chooser.showOpenDialog(null);
                 LOGGER.info("import dialog: closed with {}", result);
                 if (result == javax.swing.JFileChooser.APPROVE_OPTION) {
@@ -463,11 +472,11 @@ public class GuiSkinsManager extends GuiScreen {
                         this.pendingImportFiles = paths;
                     }
                 } else {
-                    this.status = "已取消导入";
+                    this.status = I18n.format("cnpclines.status.import_cancelled");
                 }
             } catch (Throwable t) {
                 LOGGER.error("import dialog failed", t);
-                this.status = "打开文件选择框失败: " + t;
+                this.status = I18n.format("cnpclines.status.dialog_failed", String.valueOf(t));
             } finally {
                 this.importDialogOpen = false;
             }
@@ -479,7 +488,7 @@ public class GuiSkinsManager extends GuiScreen {
         String dir = EntryTreeView.pathOf(id);
         if (!CustomSkinsPack.NAMESPACE.equals(EntryTreeView.nsOf(id))
             || dir == null || dir.isEmpty()) {
-            this.status = "该文件夹来自其他资源包，无法导入";
+            this.status = I18n.format("cnpclines.status.other_pack_import");
             return;
         }
         importPngTo(id, dir, paths);
@@ -489,21 +498,21 @@ public class GuiSkinsManager extends GuiScreen {
         try {
             CustomSkinsPack.ImportResult result = CustomSkinsPack.importPng(dir, paths);
             if (result.added() <= 0 && result.skipped() <= 0) {
-                this.status = "没有可导入的文件";
+                this.status = I18n.format("cnpclines.status.no_files");
                 return;
             }
             StringBuilder message = new StringBuilder();
             if (result.added() > 0) {
-                message.append("已导入 ").append(result.added()).append(" 个: ");
+                message.append(I18n.format("cnpclines.status.imported", result.added())).append(' ');
                 List<String> names = result.names();
                 for (int i = 0; i < names.size() && i < 2; i++) {
                     if (i > 0) {
-                        message.append("、");
+                        message.append(I18n.format("cnpclines.status.name_sep"));
                     }
                     message.append(names.get(i));
                 }
                 if (names.size() > 2) {
-                    message.append(" 等").append(names.size()).append("个");
+                    message.append(I18n.format("cnpclines.status.import_more", names.size()));
                 }
                 ResourceIndex.refresh();
                 this.tree.configure(MAIN_PATHS[this.tab], this.tree.currentDir());
@@ -513,13 +522,13 @@ public class GuiSkinsManager extends GuiScreen {
             }
             if (result.skipped() > 0) {
                 if (message.length() > 0) {
-                    message.append("；");
+                    message.append(I18n.format("cnpclines.status.sentence_sep"));
                 }
-                message.append("跳过 ").append(result.skipped()).append(" 个（非 PNG 或读取失败）");
+                message.append(I18n.format("cnpclines.status.skipped", result.skipped()));
             }
             this.status = message.toString();
         } catch (Exception e) {
-            this.status = "导入失败: " + e.getMessage();
+            this.status = I18n.format("cnpclines.status.import_failed", String.valueOf(e.getMessage()));
         }
     }
 
@@ -586,12 +595,12 @@ public class GuiSkinsManager extends GuiScreen {
     private boolean ensureOwnTarget() {
         String id = this.tree.displayDir();
         if (!CustomSkinsPack.NAMESPACE.equals(EntryTreeView.nsOf(id))) {
-            this.status = "该文件夹来自其他资源包，无法操作";
+            this.status = I18n.format("cnpclines.status.other_pack_op");
             return false;
         }
         String path = EntryTreeView.pathOf(id);
         if (path == null || path.isEmpty()) {
-            this.status = "命名空间根目录不可操作";
+            this.status = I18n.format("cnpclines.status.ns_root_op");
             return false;
         }
         return true;
@@ -604,9 +613,9 @@ public class GuiSkinsManager extends GuiScreen {
         this.mode = MODE_CREATE;
         this.targetId = this.tree.displayDir();
         this.nameBox.setText("");
-        this.nameHint = "新文件夹名";
+        this.nameHint = I18n.format("cnpclines.status.hint_new_folder");
         focusNameBox();
-        this.status = "输入名称后点 确定（或回车）创建，大写/空格/符号会自动规范为小写";
+        this.status = I18n.format("cnpclines.status.create_prompt");
         disarmDelete();
     }
 
@@ -615,15 +624,15 @@ public class GuiSkinsManager extends GuiScreen {
             return;
         }
         if (isProtectedDir(EntryTreeView.pathOf(this.tree.displayDir()))) {
-            this.status = "系统内置文件夹不可重命名";
+            this.status = I18n.format("cnpclines.status.protected_rename");
             return;
         }
         this.mode = MODE_RENAME;
         this.targetId = this.tree.displayDir();
         this.nameBox.setText(tail(EntryTreeView.pathOf(this.targetId)));
-        this.nameHint = "新名称";
+        this.nameHint = I18n.format("cnpclines.status.hint_new_name");
         focusNameBox();
-        this.status = "输入新名称后点 确定（或回车）重命名";
+        this.status = I18n.format("cnpclines.status.rename_prompt");
         disarmDelete();
     }
 
@@ -633,42 +642,42 @@ public class GuiSkinsManager extends GuiScreen {
 
     private void confirmName() {
         if (this.mode == MODE_NONE || this.targetId == null) {
-            this.status = "请先点击 新建文件夹 或 重命名";
+            this.status = I18n.format("cnpclines.status.select_first");
             return;
         }
         String raw = this.nameBox.getText().trim();
         String name = CustomSkinsPack.sanitizeFolderName(raw);
         if (name.isEmpty()) {
-            this.status = "名称需包含小写字母或数字";
+            this.status = I18n.format("cnpclines.status.name_needs_char");
             return;
         }
         boolean adjusted = !name.equals(raw);
         String dir = EntryTreeView.pathOf(this.targetId);
         if (dir == null || dir.isEmpty()) {
-            this.status = "命名空间根目录不可操作";
+            this.status = I18n.format("cnpclines.status.ns_root_op");
             this.mode = MODE_NONE;
             return;
         }
         if (this.mode == MODE_CREATE) {
             try {
                 if (!CustomSkinsPack.createFolder(CustomSkinsPack.NAMESPACE, dir, name)) {
-                    this.status = "创建失败：文件夹已存在";
+                    this.status = I18n.format("cnpclines.status.folder_exists");
                     return;
                 }
                 ResourceIndex.refresh();
                 this.tree.configure(MAIN_PATHS[this.tab], this.tree.currentDir());
                 this.tree.restoreSelection(this.targetId);
                 refreshList();
-                this.status = adjusted
-                    ? "已创建 " + name + "/（名称已自动调整）"
-                    : "已创建 " + name + "/";
+                this.status = I18n.format(adjusted
+                    ? "cnpclines.status.created_adjusted"
+                    : "cnpclines.status.created", name);
                 playClick();
             } catch (Exception e) {
-                this.status = "创建失败: " + e.getMessage();
+                this.status = I18n.format("cnpclines.status.create_failed", String.valueOf(e.getMessage()));
             }
         } else {
             if (isProtectedDir(dir)) {
-                this.status = "系统内置文件夹不可重命名";
+                this.status = I18n.format("cnpclines.status.protected_rename");
                 return;
             }
             try {
@@ -683,12 +692,12 @@ public class GuiSkinsManager extends GuiScreen {
                 this.tree.configure(MAIN_PATHS[this.tab], this.tree.currentDir());
                 this.tree.restoreSelection(newId);
                 refreshList();
-                this.status = adjusted
-                    ? "已重命名为 " + name + "/（名称已自动调整）"
-                    : "已重命名为 " + name + "/";
+                this.status = I18n.format(adjusted
+                    ? "cnpclines.status.renamed_adjusted"
+                    : "cnpclines.status.renamed", name);
                 playClick();
             } catch (Exception e) {
-                this.status = "重命名失败: " + e.getMessage();
+                this.status = I18n.format("cnpclines.status.rename_failed", String.valueOf(e.getMessage()));
             }
         }
         this.mode = MODE_NONE;
@@ -710,7 +719,7 @@ public class GuiSkinsManager extends GuiScreen {
             ResourceLocation location = this.list.selectedLocation();
             String original = ResourceIndex.toOriginal(location.getNamespace(), location.getPath());
             if (!CustomSkinsPack.ownsFile(location.getNamespace(), original)) {
-                this.status = "该文件来自其他资源包，无法删除";
+                this.status = I18n.format("cnpclines.status.other_pack_file_delete");
                 return;
             }
             this.pendingFile = location;
@@ -719,30 +728,30 @@ public class GuiSkinsManager extends GuiScreen {
             String ns = EntryTreeView.nsOf(id);
             String path = EntryTreeView.pathOf(id);
             if (!CustomSkinsPack.NAMESPACE.equals(ns)) {
-                this.status = "该文件夹来自其他资源包，无法删除";
+                this.status = I18n.format("cnpclines.status.other_pack_folder_delete");
                 return;
             }
             if (path == null || path.isEmpty()) {
-                this.status = "命名空间根目录不可删除";
+                this.status = I18n.format("cnpclines.status.ns_root_delete");
                 return;
             }
             if (isProtectedDir(path)) {
-                this.status = "系统内置文件夹不可删除";
+                this.status = I18n.format("cnpclines.status.protected_delete");
                 return;
             }
             if (!CustomSkinsPack.owns(ns, path)) {
-                this.status = "该文件夹来自其他资源包，无法删除";
+                this.status = I18n.format("cnpclines.status.other_pack_folder_delete");
                 return;
             }
             this.pendingDir = id;
         } else {
-            this.status = "请先在左侧选中文件夹或右侧选中条目";
+            this.status = I18n.format("cnpclines.status.select_target");
             return;
         }
         this.armedDelete = true;
         this.armedAt = System.currentTimeMillis();
-        this.deleteButton.displayString = "确认删除?";
-        this.status = "再次点击 删除 以确认";
+        this.deleteButton.displayString = I18n.format("cnpclines.manager.confirm_delete");
+        this.status = I18n.format("cnpclines.status.confirm_prompt");
     }
 
     private void runPendingDelete() {
@@ -775,10 +784,10 @@ public class GuiSkinsManager extends GuiScreen {
             ResourceIndex.refresh();
             this.tree.configure(MAIN_PATHS[this.tab], parent);
             refreshList();
-            this.status = "已删除 " + tail(path) + "（仅本包）";
+            this.status = I18n.format("cnpclines.status.deleted_folder", tail(path));
             playClick();
         } catch (Exception e) {
-            this.status = "删除失败: " + e.getMessage();
+            this.status = I18n.format("cnpclines.status.delete_failed", String.valueOf(e.getMessage()));
         }
     }
 
@@ -793,10 +802,10 @@ public class GuiSkinsManager extends GuiScreen {
             ResourceIndex.refresh();
             refreshList();
             int slash = original.lastIndexOf('/');
-            this.status = "已删除 " + original.substring(slash + 1);
+            this.status = I18n.format("cnpclines.status.deleted_file", original.substring(slash + 1));
             playClick();
         } catch (Exception e) {
-            this.status = "删除失败: " + e.getMessage();
+            this.status = I18n.format("cnpclines.status.delete_failed", String.valueOf(e.getMessage()));
         }
     }
 
@@ -808,7 +817,7 @@ public class GuiSkinsManager extends GuiScreen {
         }
         this.armedDelete = false;
         if (this.deleteButton != null) {
-            this.deleteButton.displayString = "删除";
+            this.deleteButton.displayString = I18n.format("cnpclines.manager.delete");
         }
     }
 
@@ -826,17 +835,19 @@ public class GuiSkinsManager extends GuiScreen {
         Gui.drawRect(x, y + PANEL_H - 1, x + PANEL_W, y + PANEL_H, COL_DARK);
         Gui.drawRect(x + PANEL_W - 1, y, x + PANEL_W, y + PANEL_H, COL_DARK);
 
-        this.fontRenderer.drawString("Skins 管理器", x + 8, y + 7, COL_TEXT);
-        int pathX = 8 + this.fontRenderer.getStringWidth("Skins 管理器") + 6;
+        String title = I18n.format("cnpclines.manager.title");
+        this.fontRenderer.drawString(title, x + 8, y + 7, COL_TEXT);
+        int pathX = 8 + this.fontRenderer.getStringWidth(title) + 6;
         String path = EntryTreeView.displayPath(this.tree.displayDir());
         if (this.tree.hoveringFolder()) {
-            path = path + "（双击打开）";
+            path = path + I18n.format("cnpclines.editor.dblclick");
         }
         this.fontRenderer.drawString(TextureEntryList.ellipsize(this.fontRenderer, path, PANEL_W - 6 - pathX),
             x + pathX, y + 7, COL_TEXT);
 
         Gui.drawRect(x + 8, y + 180, x + 412, y + 181, COL_DIVIDER);
-        String line = this.status == null || this.status.isEmpty() ? "就绪" : this.status;
+        String line = this.status == null || this.status.isEmpty()
+            ? I18n.format("cnpclines.manager.ready") : this.status;
         this.fontRenderer.drawString(TextureEntryList.ellipsize(this.fontRenderer, line, 332),
             x + 8, y + 187, COL_TEXT);
     }
@@ -844,15 +855,19 @@ public class GuiSkinsManager extends GuiScreen {
     private void drawControls() {
         int x = this.guiLeft;
         int y = this.guiTop;
-        this.fontRenderer.drawString(TextureEntryList.ellipsize(this.fontRenderer, "Ctrl+V 粘贴 PNG 导入", 96),
+        this.fontRenderer.drawString(TextureEntryList.ellipsize(this.fontRenderer,
+            I18n.format("cnpclines.manager.ctrlv"), 96),
             x + 316, y + 110, 0xFF707070);
-        this.fontRenderer.drawString(TextureEntryList.ellipsize(this.fontRenderer, "长按左滑条目删除", 96),
+        this.fontRenderer.drawString(TextureEntryList.ellipsize(this.fontRenderer,
+            I18n.format("cnpclines.manager.swipe"), 96),
             x + 316, y + 122, 0xFF707070);
         String hint;
         if (this.mode == MODE_CREATE) {
-            hint = "新建: " + safeTail(EntryTreeView.pathOf(this.targetId));
+            hint = I18n.format("cnpclines.manager.hint_new",
+                safeTail(EntryTreeView.pathOf(this.targetId)));
         } else if (this.mode == MODE_RENAME) {
-            hint = "重命名: " + safeTail(EntryTreeView.pathOf(this.targetId));
+            hint = I18n.format("cnpclines.manager.hint_rename",
+                safeTail(EntryTreeView.pathOf(this.targetId)));
         } else {
             hint = "";
         }
@@ -873,7 +888,7 @@ public class GuiSkinsManager extends GuiScreen {
             int tw = rects[i][2];
             Gui.drawRect(tx, ty, tx + tw, this.guiTop, COL_TAB_OFF);
             Gui.drawRect(tx, ty, tx + tw, ty + 1, COL_LIGHT);
-            this.fontRenderer.drawString(TAB_NAMES[i], tx + 26, this.guiTop - 4, 0xFFFFFFFF);
+            this.fontRenderer.drawString(I18n.format(TAB_KEYS[i]), tx + 26, this.guiTop - 4, 0xFFFFFFFF);
             drawIcon(TAB_ICONS[i], tx + 8, this.guiTop - 8);
         }
     }
@@ -888,7 +903,7 @@ public class GuiSkinsManager extends GuiScreen {
         Gui.drawRect(tx, ty, tx + 1, this.guiTop + 1, COL_LIGHT);
         Gui.drawRect(tx, ty, tx + tw, ty + 1, COL_LIGHT);
         Gui.drawRect(tx + tw - 1, ty, tx + tw, this.guiTop + 1, COL_DARK);
-        this.fontRenderer.drawString(TAB_NAMES[i], tx + 26, ty + 4, COL_TEXT);
+        this.fontRenderer.drawString(I18n.format(TAB_KEYS[i]), tx + 26, ty + 4, COL_TEXT);
         drawIcon(TAB_ICONS[i], tx + 8, ty + 1);
     }
 
@@ -900,10 +915,10 @@ public class GuiSkinsManager extends GuiScreen {
     private int[][] tabRects() {
         int top = Math.max(0, this.guiTop - TAB_H);
         int height = this.guiTop + 1 - top;
-        int[][] rects = new int[TAB_NAMES.length][4];
+        int[][] rects = new int[TAB_KEYS.length][4];
         int tx = this.guiLeft + 6;
-        for (int i = 0; i < TAB_NAMES.length; i++) {
-            int tw = tabWidth(TAB_NAMES[i]);
+        for (int i = 0; i < TAB_KEYS.length; i++) {
+            int tw = tabWidth(I18n.format(TAB_KEYS[i]));
             rects[i] = new int[]{tx, top, tw, height};
             tx += tw + 2;
         }

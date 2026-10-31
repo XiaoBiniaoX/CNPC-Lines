@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.Gui;
+import net.minecraft.client.resources.I18n;
 import net.minecraft.util.ResourceLocation;
 
 public class SearchResultView {
@@ -111,15 +112,15 @@ public class SearchResultView {
         int contentW = this.w - 2;
 
         String header;
+        int count = this.rows.size();
         if (this.rows.isEmpty()) {
             header = this.scope.isEmpty()
-                ? "无匹配结果（试试拼音或首字母）"
-                : "在 " + this.scope + " 内无匹配结果";
+                ? I18n.format("cnpclines.search.empty")
+                : I18n.format("cnpclines.search.empty_scope", this.scope);
         } else {
             header = this.scope.isEmpty()
-                ? "结果 " + this.rows.size() + " 项，点击或回车定位"
-                : "在 " + this.scope + " 内找到 " + this.rows.size()
-                    + " 项，点击定位";
+                ? I18n.format("cnpclines.search.count", count)
+                : I18n.format("cnpclines.search.count_scope", this.scope, count);
         }
         this.font.drawString(TextureEntryList.ellipsize(this.font, header, contentW - 8),
             contentX + 4, this.y + 4, COL_HEADER, false);

@@ -12,8 +12,20 @@ import top.cnpclines.network.OpenCustomBarOverlayPacket;
 public final class ClientMessageOverlay {
     private static final Logger LOGGER = LogManager.getLogger("cnpclines");
     private static final String ICONS = "cnpclines:textures/overlay/message/icons/";
+    private static int generation;
 
     private ClientMessageOverlay() {
+    }
+
+    public static int generation() {
+        return generation;
+    }
+
+    public static void clear() {
+        generation++;
+        for (int i = 0; i < 500; i++) {
+            HudOverlayManager.removeComponent(i);
+        }
     }
 
     public static void show(OpenCustomBarOverlayPacket packet) {
@@ -24,9 +36,7 @@ public final class ClientMessageOverlay {
         FontRenderer font = Minecraft.getMinecraft().fontRenderer;
         LOGGER.info("[cnpclines] overlay show: displayMillis={}, icon={}", displayMillis, packet.getIcon());
 
-        for (int i = 0; i < 500; i++) {
-            HudOverlayManager.removeComponent(i);
-        }
+        clear();
 
         String name = packet.getName();
         String coloredName = "[" + name + "]§f:";

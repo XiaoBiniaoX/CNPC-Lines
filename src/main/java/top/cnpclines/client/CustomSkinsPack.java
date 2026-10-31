@@ -11,6 +11,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.I18n;
 import net.minecraft.client.resources.ResourcePackRepository;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
@@ -339,17 +340,17 @@ public final class CustomSkinsPack {
 
     public static String renameFolder(String namespace, String dir, String name) throws IOException {
         if (!NAME_PATTERN.matcher(name).matches()) {
-            return "名称只能包含小写字母、数字、下划线";
+            return I18n.format("cnpclines.status.bad_name");
         }
         Path source = mirror(namespace, dir);
         if (!Files.isDirectory(source)) {
-            return "该文件夹来自其他资源包，无法重命名";
+            return I18n.format("cnpclines.status.other_pack_rename");
         }
         int lastSlash = dir.lastIndexOf('/', dir.length() - 2);
         String newName = dir.substring(0, lastSlash + 1) + name + "/";
         Path target = mirror(namespace, newName);
         if (Files.exists(target)) {
-            return "同名文件夹已存在";
+            return I18n.format("cnpclines.status.folder_exists_other");
         }
         Files.move(source, target);
         return null;
@@ -358,7 +359,7 @@ public final class CustomSkinsPack {
     public static String deleteFolder(String namespace, String dir) throws IOException {
         Path source = mirror(namespace, dir);
         if (!Files.isDirectory(source)) {
-            return "该文件夹来自其他资源包，无法删除";
+            return I18n.format("cnpclines.status.other_pack_folder_delete");
         }
         Files.walk(source)
             .sorted(java.util.Comparator.reverseOrder())
@@ -374,7 +375,7 @@ public final class CustomSkinsPack {
     public static String deleteFile(String namespace, String path) throws IOException {
         Path source = mirror(namespace, path);
         if (!Files.isRegularFile(source)) {
-            return "该文件来自其他资源包，无法删除";
+            return I18n.format("cnpclines.status.other_pack_file_delete");
         }
         Files.delete(source);
         return null;

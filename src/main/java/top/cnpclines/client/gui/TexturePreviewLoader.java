@@ -91,6 +91,9 @@ public final class TexturePreviewLoader {
     }
 
     public static Preview peek(ResourceLocation location) {
+        if (location == null) {
+            return null;
+        }
         String key = location.toString();
         Preview cached = REGISTERED.get(key);
         if (cached != null) {

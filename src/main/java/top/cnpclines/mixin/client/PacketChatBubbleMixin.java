@@ -14,6 +14,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import top.cnpclines.client.NpcLineQueue;
+import top.cnpclines.config.ClientConfig;
 
 @Mixin(value = PacketChatBubble.class, remap = false)
 public class PacketChatBubbleMixin {
@@ -31,6 +32,9 @@ public class PacketChatBubbleMixin {
 
     @Inject(method = "handle()V", at = @At("HEAD"), cancellable = true)
     private void cnpclines$rerouteToOverlay(CallbackInfo ci) {
+        if (!ClientConfig.replaceNpcLines) {
+            return;
+        }
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null) {
             Entity entity = mc.level.getEntity(this.id);

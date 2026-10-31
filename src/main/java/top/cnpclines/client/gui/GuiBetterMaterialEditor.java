@@ -4,6 +4,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import noppes.npcs.client.gui.custom.components.CustomGuiEntityDisplay;
@@ -31,7 +32,9 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
     private static final int COL_SLOT_B = 0xFF9E9E9E;
     private static final int COL_SLOT_EDGE = 0xFF373737;
 
-    private static final String[] TAB_NAMES = {"材质", "披风", "附加材质"};
+    private static final String[] TAB_KEYS = {
+        "cnpclines.tab.material", "cnpclines.tab.cloak", "cnpclines.tab.overlays",
+    };
     private static final String[] MAIN_PATHS = {
         "textures/entity/humanmale/",
         "textures/cloak/",
@@ -76,7 +79,7 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
     private String boxMessage = "";
 
     public GuiBetterMaterialEditor(GuiNpcDisplay parent) {
-        super(Component.literal("更好的材质编辑"));
+        super(Component.translatable("cnpclines.editor.title"));
         this.parent = parent;
         this.npc = parent.npc;
         this.display = npc.display;
@@ -127,7 +130,7 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
         this.searchBox = new EditBox(this.font, this.guiLeft + 6, this.guiTop + 20, 304, 16,
             Component.literal(""));
         this.searchBox.setMaxLength(64);
-        this.searchBox.setHint(Component.literal("搜索皮肤：文件名 / 拼音 / 首字母（如 hs → 红色）"));
+        this.searchBox.setHint(Component.translatable("cnpclines.search.hint"));
         this.searchBox.setResponder(value -> refreshSearch());
         this.addRenderableWidget(this.searchBox);
         refreshSearch();
@@ -135,7 +138,7 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
         this.textureBox = new EditBox(this.font, this.guiLeft + 40, this.guiTop + 183, 270, 16,
             Component.literal(""));
         this.textureBox.setMaxLength(320);
-        this.textureBox.setHint(Component.literal("贴图路径，回车应用"));
+        this.textureBox.setHint(Component.translatable("cnpclines.editor.texture_hint"));
         this.textureBox.setResponder(value -> this.boxMessage = "");
         this.addRenderableWidget(this.textureBox);
 
@@ -146,16 +149,16 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
             refreshTree();
         }
 
-        this.addRenderableWidget(Button.builder(Component.literal("保存"), button -> saveAndReturn())
+        this.addRenderableWidget(Button.builder(Component.translatable("cnpclines.editor.save"), button -> saveAndReturn())
             .bounds(this.guiLeft + 284, this.guiTop + 206, 64, 20).build());
-        this.addRenderableWidget(Button.builder(Component.literal("取消"), button -> cancelAndReturn())
+        this.addRenderableWidget(Button.builder(Component.translatable("cnpclines.editor.cancel"), button -> cancelAndReturn())
             .bounds(this.guiLeft + 350, this.guiTop + 206, 64, 20).build());
-        this.addRenderableWidget(Button.builder(Component.literal("Skins管理器"), button -> openManager())
+        this.addRenderableWidget(Button.builder(Component.translatable("cnpclines.editor.manager"), button -> openManager())
             .bounds(this.guiLeft + 8, this.guiTop + 206, 94, 20).build());
 
         this.slider = new GuiSliderNop(this, 0, this.guiLeft + 318, this.guiTop + 124, 94, 20,
             this.rotation / 360f);
-        this.slider.setString("旋转 " + this.rotation + "°");
+        this.slider.setString(I18n.get("cnpclines.editor.rotate", this.rotation));
         this.addRenderableWidget(this.slider);
     }
 
@@ -232,7 +235,7 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
     @Override
     public void mouseDragged(GuiSliderNop slider) {
         this.rotation = Math.round(slider.sliderValue * 360.0f);
-        slider.setString("旋转 " + this.rotation + "°");
+        slider.setString(I18n.get("cnpclines.editor.rotate", this.rotation));
     }
 
     @Override
@@ -312,7 +315,7 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
         this.tree.restoreSelection(dirId);
         refreshList();
         this.list.setSelected(location);
-        this.boxMessage = "已定位: " + EntryTreeView.displayPath(dirId);
+        this.boxMessage = I18n.get("cnpclines.editor.located", EntryTreeView.displayPath(dirId));
     }
 
     private void applyBoxValue() {
@@ -335,10 +338,10 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
                     }
                     this.boxMessage = "";
                 } catch (Exception e) {
-                    this.boxMessage = "URL无效";
+                    this.boxMessage = I18n.get("cnpclines.editor.url_invalid");
                 }
             } else {
-                this.boxMessage = "仅皮肤支持URL";
+                this.boxMessage = I18n.get("cnpclines.editor.url_skin_only");
             }
             return;
         }
@@ -355,7 +358,7 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
                 this.tree.configure(MAIN_PATHS[this.tab], id);
                 refreshList();
             } else {
-                this.boxMessage = "路径不存在";
+                this.boxMessage = I18n.get("cnpclines.editor.path_missing");
             }
             return;
         }
@@ -370,13 +373,13 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
             return;
         }
         if (CustomSkinsPack.NAMESPACE.equals(ns)) {
-            this.boxMessage = "路径不存在";
+            this.boxMessage = I18n.get("cnpclines.editor.path_missing");
             return;
         }
         try {
             location = ResourceLocation.fromNamespaceAndPath(ns, path);
         } catch (Exception e) {
-            this.boxMessage = "路径无效";
+            this.boxMessage = I18n.get("cnpclines.editor.path_invalid");
             return;
         }
         applyTexture(this.tab, location);
@@ -574,25 +577,28 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
         graphics.fill(x, y + PANEL_H - 1, x + PANEL_W, y + PANEL_H, COL_DARK);
         graphics.fill(x + PANEL_W - 1, y, x + PANEL_W, y + PANEL_H, COL_DARK);
 
-        graphics.drawString(this.font, "更好的材质编辑", x + 8, y + 7, COL_TEXT, false);
+        String title = I18n.get("cnpclines.editor.title");
+        graphics.drawString(this.font, title, x + 8, y + 7, COL_TEXT, false);
         String hint = null;
         if (this.tab == 0 && this.display.skinType != 0) {
-            hint = this.display.skinType == 1 ? "当前: 玩家皮肤" : "当前: URL 皮肤";
+            hint = this.display.skinType == 1
+                ? I18n.get("cnpclines.editor.current_player")
+                : I18n.get("cnpclines.editor.current_url");
             graphics.drawString(this.font, hint, x + 78, y + 7, COL_HINT, false);
         }
-        int pathX = 8 + this.font.width("更好的材质编辑") + 6;
+        int pathX = 8 + this.font.width(title) + 6;
         if (hint != null) {
             pathX = Math.max(pathX, 78 + this.font.width(hint) + 6);
         }
         String path = EntryTreeView.displayPath(this.tree.displayDir());
         if (this.tree.hoveringFolder()) {
-            path = path + "（双击打开）";
+            path = path + I18n.get("cnpclines.gui.hover_open");
         }
         graphics.drawString(this.font, ellipsize(path, PANEL_W - 6 - pathX),
             x + pathX, y + 7, COL_TEXT, false);
 
         graphics.fill(x + 8, y + 180, x + 412, y + 181, COL_DIVIDER);
-        graphics.drawString(this.font, "当前:", x + 8, y + 186, COL_TEXT, false);
+        graphics.drawString(this.font, I18n.get("cnpclines.editor.current"), x + 8, y + 186, COL_TEXT, false);
         if (this.boxMessage != null && !this.boxMessage.isEmpty()) {
             graphics.drawString(this.font, ellipsize(this.boxMessage, 92),
                 x + 316, y + 186, 0xFFC04040, false);
@@ -610,7 +616,7 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
             int tw = rects[i][2];
             graphics.fill(tx, ty, tx + tw, this.guiTop, COL_TAB_OFF);
             graphics.fill(tx, ty, tx + tw, ty + 1, COL_LIGHT);
-            graphics.drawString(this.font, TAB_NAMES[i], tx + 26, this.guiTop - 4,
+            graphics.drawString(this.font, I18n.get(TAB_KEYS[i]), tx + 26, this.guiTop - 4,
                 0xFFFFFFFF, false);
             graphics.blit(TAB_ICONS[i], tx + 8, this.guiTop - 8, 16, 16,
                 0.0F, 0.0F, 16, 16, 16, 16);
@@ -627,7 +633,7 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
         graphics.fill(tx, ty, tx + 1, this.guiTop + 1, COL_LIGHT);
         graphics.fill(tx, ty, tx + tw, ty + 1, COL_LIGHT);
         graphics.fill(tx + tw - 1, ty, tx + tw, this.guiTop + 1, COL_DARK);
-        graphics.drawString(this.font, TAB_NAMES[i], tx + 26, ty + 4, 0xFF000000, false);
+        graphics.drawString(this.font, I18n.get(TAB_KEYS[i]), tx + 26, ty + 4, 0xFF000000, false);
         graphics.blit(TabIcons.black(TAB_ICONS[i]), tx + 8, ty + 1, 16, 16,
             0.0F, 0.0F, 16, 16, 16, 16);
     }
@@ -635,10 +641,10 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
     private int[][] tabRects() {
         int top = Math.max(0, this.guiTop - TAB_H);
         int height = this.guiTop + 1 - top;
-        int[][] rects = new int[TAB_NAMES.length][4];
+        int[][] rects = new int[TAB_KEYS.length][4];
         int tx = this.guiLeft + 6;
-        for (int i = 0; i < TAB_NAMES.length; i++) {
-            int tw = tabWidth(TAB_NAMES[i]);
+        for (int i = 0; i < TAB_KEYS.length; i++) {
+            int tw = tabWidth(I18n.get(TAB_KEYS[i]));
             rects[i] = new int[]{tx, top, tw, height};
             tx += tw + 2;
         }
@@ -661,13 +667,17 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
     }
 
     private void drawPreview(GuiGraphics graphics, int mouseX, int mouseY) {
-        graphics.drawCenteredString(this.font, "NPC 预览", this.guiLeft + 365,
+        graphics.drawCenteredString(this.font, I18n.get("cnpclines.editor.preview"), this.guiLeft + 365,
             this.guiTop + 22, COL_TEXT);
         drawNpc(graphics, this.guiLeft + 365, this.guiTop + 116, 1.3f, this.rotation,
             mouseX, mouseY);
     }
 
     private void drawNpc(GuiGraphics graphics, int x, int y, float zoom, int angle, int mouseX, int mouseY) {
+        // CNPC copies this cache to its model NPC before the renderer resolves the skin.
+        if (this.npc.textureLocation == null) {
+            this.minecraft.getEntityRenderDispatcher().getRenderer(this.npc).getTextureLocation(this.npc);
+        }
         CustomGuiEntityDisplay.drawEntity(graphics, this.npc, x, y, zoom, angle, 0, 0,
             0f, 0f, false);
     }
@@ -683,11 +693,10 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
             this.display.setSkinTexture(location.toString());
             this.npc.textureLocation = null;
             graphics.enableScissor(x, y, x + size, y + size);
-            CustomGuiEntityDisplay.drawEntity(graphics, this.npc, x + size / 2, y + size,
-                0.40f, back ? 180 : 0, 0, 0, 0f, 0f, false);
-            graphics.disableScissor();
+            drawNpc(graphics, x + size / 2, y + size, 0.40f, back ? 180 : 0, 0, 0);
         } catch (Exception ignored) {
         } finally {
+            graphics.disableScissor();
             this.display.setSkinTexture(previousSkin);
             this.display.skinType = previousType;
             this.npc.textureLocation = null;

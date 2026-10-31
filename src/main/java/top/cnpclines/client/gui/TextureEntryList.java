@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.resources.ResourceLocation;
 
 public class TextureEntryList {
@@ -133,7 +134,7 @@ public class TextureEntryList {
         int current = this.highlight == null ? -1 : this.items.indexOf(this.highlight);
 
         if (this.items.isEmpty()) {
-            graphics.drawCenteredString(this.font, "（暂无文件）",
+            graphics.drawCenteredString(this.font, I18n.get("cnpclines.list.empty"),
                 contentX + rowW / 2, contentY + contentH / 2 - 4, 0xFF909090);
             return;
         }
@@ -381,7 +382,7 @@ public class TextureEntryList {
             return;
         }
         if (preview.failed() || preview.front() == null) {
-            graphics.drawCenteredString(font, "无", sx + size / 2, sy + 9, 0xFFFFFFFF);
+            graphics.drawCenteredString(font, I18n.get("cnpclines.list.none"), sx + size / 2, sy + 9, 0xFFFFFFFF);
             return;
         }
         int texWidth = preview.width();
@@ -405,7 +406,7 @@ public class TextureEntryList {
             return;
         }
         if (preview.failed() || preview.front() == null) {
-            graphics.drawCenteredString(font, "无", sx + size / 2, sy + 9, 0xFFFFFFFF);
+            graphics.drawCenteredString(font, I18n.get("cnpclines.list.none"), sx + size / 2, sy + 9, 0xFFFFFFFF);
             return;
         }
         int sliceWidth = slice[2];

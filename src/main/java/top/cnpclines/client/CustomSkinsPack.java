@@ -10,6 +10,7 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -25,8 +26,6 @@ public final class CustomSkinsPack {
     public static final String PACK_NAME = "Custom Skins";
     public static final String BUILTIN_PACK_NAME = "CNPC Lines Built-in";
     public static final String NAMESPACE = "customnpcs";
-    public static final String DESCRIPTION =
-        "由CNPCLines自动创建的材质包，用于便捷添加皮肤、披风、额外材质文件。";
     public static final Pattern NAME_PATTERN = Pattern.compile("^[a-z0-9_]+$");
 
     private static final Logger LOGGER = LoggerFactory.getLogger("cnpclines");
@@ -60,7 +59,7 @@ public final class CustomSkinsPack {
     }
 
     private static void ensure(Minecraft minecraft) throws IOException {
-        writePackMeta(root(), DESCRIPTION);
+        writePackMeta(root());
         cleanupLegacyBuiltin(minecraft);
         for (String dir : BASE_DIRS) {
             Files.createDirectories(mirror(NAMESPACE, dir));
@@ -107,13 +106,11 @@ public final class CustomSkinsPack {
         }
     }
 
-    private static void writePackMeta(Path root, String description) throws IOException {
+    private static void writePackMeta(Path root) throws IOException {
         Path meta = root.resolve("pack.mcmeta");
-        if (Files.exists(meta)) {
-            return;
-        }
         Files.createDirectories(root);
-        String json = "{\"pack\":{\"pack_format\":34,\"description\":\"" + description + "\"}}";
+        String json = "{\"pack\":{\"pack_format\":34,"
+            + "\"description\":{\"translate\":\"cnpclines.pack.desc\"}}}";
         Files.writeString(meta, json, StandardCharsets.UTF_8);
     }
 
@@ -299,17 +296,17 @@ public final class CustomSkinsPack {
 
     public static String renameFolder(String namespace, String dir, String name) throws IOException {
         if (!NAME_PATTERN.matcher(name).matches()) {
-            return "名称只能包含小写字母、数字、下划线";
+            return I18n.get("cnpclines.err.name_invalid");
         }
         Path source = mirror(namespace, dir);
         if (!Files.isDirectory(source)) {
-            return "该文件夹来自其他资源包，无法重命名";
+            return I18n.get("cnpclines.err.folder_foreign_rename");
         }
         int lastSlash = dir.lastIndexOf('/', dir.length() - 2);
         String newName = dir.substring(0, lastSlash + 1) + name + "/";
         Path target = mirror(namespace, newName);
         if (Files.exists(target)) {
-            return "同名文件夹已存在";
+            return I18n.get("cnpclines.err.folder_exists");
         }
         Files.move(source, target);
         return null;
@@ -318,7 +315,7 @@ public final class CustomSkinsPack {
     public static String deleteFolder(String namespace, String dir) throws IOException {
         Path source = mirror(namespace, dir);
         if (!Files.isDirectory(source)) {
-            return "该文件夹来自其他资源包，无法删除";
+            return I18n.get("cnpclines.err.folder_foreign_delete");
         }
         Files.walk(source)
             .sorted(java.util.Comparator.reverseOrder())
@@ -334,7 +331,7 @@ public final class CustomSkinsPack {
     public static String deleteFile(String namespace, String path) throws IOException {
         Path source = mirror(namespace, path);
         if (!Files.isRegularFile(source)) {
-            return "该文件来自其他资源包，无法删除";
+            return I18n.get("cnpclines.err.file_foreign_delete");
         }
         Files.delete(source);
         return null;

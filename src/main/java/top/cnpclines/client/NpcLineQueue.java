@@ -10,6 +10,7 @@ import noppes.npcs.entity.EntityNPCInterface;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import top.cnpclines.CNPCLines;
+import top.cnpclines.config.ClientConfig;
 import top.cnpclines.network.OpenCustomBarOverlayPacket;
 
 @EventBusSubscriber(modid = CNPCLines.MOD_ID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.GAME)
@@ -30,6 +31,9 @@ public final class NpcLineQueue {
     }
 
     public static synchronized void enqueue(String text, EntityNPCInterface npc) {
+        if (!ClientConfig.replaceNpcLines) {
+            return;
+        }
         String name = npc.getDisplayName().getString();
         queue.addLast(new Entry(text, name, npc, System.currentTimeMillis()));
         LOGGER.info("[cnpclines] NPC line queued: {}", text);
@@ -38,6 +42,13 @@ public final class NpcLineQueue {
     @SubscribeEvent
     public static synchronized void onClientTick(ClientTickEvent.Post event) {
         NpcSkinIcon.drain();
+        if (!ClientConfig.replaceNpcLines) {
+            queue.clear();
+            showing = false;
+            fading = false;
+            ClientMessageOverlay.clearNpc();
+            return;
+        }
         long now = System.currentTimeMillis();
         if (!showing) {
             if (!queue.isEmpty()) {
@@ -48,7 +59,7 @@ public final class NpcLineQueue {
         if (!fading) {
             long displayLimit = queue.isEmpty() ? DISPLAY_LAST_MS : DISPLAY_SHORT_MS;
             if (now - showStart >= displayLimit) {
-                HudOverlayManager.fadeOutAll((int) FADE_MS);
+                ClientMessageOverlay.fadeOutNpc((int) FADE_MS);
                 fading = true;
                 fadeStart = now;
                 LOGGER.info("[cnpclines] line fade-start queue={}", queue.size());
@@ -75,9 +86,8 @@ public final class NpcLineQueue {
         }
         queue.poll();
         LOGGER.info("[cnpclines] line show: {}", entry.text);
-        ClientMessageOverlay.show(
-            new OpenCustomBarOverlayPacket(entry.text, entry.name, "#FFFFFF", icon, 32, 40),
-            0L
+        ClientMessageOverlay.showNpc(
+            new OpenCustomBarOverlayPacket(entry.text, entry.name, "#FFFFFF", icon, 32, 40)
         );
         showing = true;
         fading = false;

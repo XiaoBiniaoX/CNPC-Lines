@@ -5,9 +5,9 @@ import com.mojang.brigadier.tree.CommandNode;
 import com.mojang.logging.LogUtils;
 import java.lang.reflect.Field;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.language.I18n;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -19,26 +19,22 @@ import top.cnpclines.CNPCLines;
 @EventBusSubscriber(modid = CNPCLines.MOD_ID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.GAME)
 public final class CommandTreeLocalizer {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final Map<String, String> EN_TO_ZH = new HashMap<>();
-    private static final Map<String, String> ZH_TO_EN = new HashMap<>();
+    private static final Map<String, String> ARG_KEYS = new HashMap<>();
 
     static {
-        EN_TO_ZH.put("player", "玩家");
-        EN_TO_ZH.put("message", "消息");
-        EN_TO_ZH.put("name", "名字");
-        EN_TO_ZH.put("color", "颜色");
-        EN_TO_ZH.put("maxSymbolsFirstLine", "首行最大字符数");
-        EN_TO_ZH.put("maxSymbolsOtherLines", "其余行最大字符数");
-        EN_TO_ZH.put("icon", "图标");
-        for (Map.Entry<String, String> entry : EN_TO_ZH.entrySet()) {
-            ZH_TO_EN.put(entry.getValue(), entry.getKey());
-        }
+        ARG_KEYS.put("player", "cnpclines.arg.player");
+        ARG_KEYS.put("message", "cnpclines.arg.message");
+        ARG_KEYS.put("name", "cnpclines.arg.name");
+        ARG_KEYS.put("color", "cnpclines.arg.color");
+        ARG_KEYS.put("maxSymbolsFirstLine", "cnpclines.arg.maxSymbolsFirstLine");
+        ARG_KEYS.put("maxSymbolsOtherLines", "cnpclines.arg.maxSymbolsOtherLines");
+        ARG_KEYS.put("icon", "cnpclines.arg.icon");
     }
 
     private static Field nameField;
     private static boolean renameFailed;
     private static CommandNode<?> processedTop;
-    private static boolean processedChinese;
+    private static String processedLang;
 
     private CommandTreeLocalizer() {
     }
@@ -67,32 +63,32 @@ public final class CommandTreeLocalizer {
             processedTop = null;
             return;
         }
-        String gameLanguage = minecraft.getLanguageManager().getSelected();
-        String systemLanguage = Locale.getDefault().getLanguage();
-        boolean chinese = gameLanguage.startsWith("zh") || "zh".equals(systemLanguage);
-        if (top == processedTop && chinese == processedChinese) {
+        String lang = minecraft.getLanguageManager().getSelected();
+        if (top == processedTop && lang.equals(processedLang)) {
             return;
         }
-        int renamed = renameSubtree(top, chinese);
+        int renamed = renameSubtree(top);
         LOGGER.info(
-            "[cnpclines] command tree localize: gameLang={}, systemLang={}, chinese={}, renamedNodes={}, effective={}",
-            gameLanguage, systemLanguage, chinese, renamed, renamed > 0 || !chinese
+            "[cnpclines] command tree localize: lang={}, renamedNodes={}", lang, renamed
         );
         processedTop = top;
-        processedChinese = chinese;
+        processedLang = lang;
     }
 
-    private static int renameSubtree(CommandNode<?> node, boolean chinese) {
+    private static int renameSubtree(CommandNode<?> node) {
         int renamed = 0;
         if (node instanceof ArgumentCommandNode<?, ?> argumentNode) {
-            String current = argumentNode.getName();
-            String target = chinese ? EN_TO_ZH.get(current) : ZH_TO_EN.get(current);
-            if (target != null && rename(argumentNode, target)) {
-                renamed++;
+            String key = ARG_KEYS.get(argumentNode.getName());
+            if (key != null) {
+                String target = I18n.get(key);
+                if (!target.equals(key) && !target.equals(argumentNode.getName())
+                    && rename(argumentNode, target)) {
+                    renamed++;
+                }
             }
         }
         for (CommandNode<?> child : node.getChildren()) {
-            renamed += renameSubtree(child, chinese);
+            renamed += renameSubtree(child);
         }
         return renamed;
     }

@@ -96,6 +96,7 @@ public class GuiSkinsManager extends GuiScreen {
 
     public GuiSkinsManager(GuiBetterMaterialEditor parent) {
         this.parent = parent;
+        if (parent.flagMode()) this.tab = 1;
     }
 
     @Override
@@ -169,7 +170,7 @@ public class GuiSkinsManager extends GuiScreen {
     }
 
     private void refreshList() {
-        this.list.setPreviewMode(this.tab);
+        this.list.setPreviewMode(this.parent.flagMode() ? TextureEntryList.FLAG_PREVIEW : this.tab);
         this.list.setSwipeEnabled(true);
         String dir = this.tree.displayDir();
         this.list.setItems(ResourceIndex.filesIn(EntryTreeView.nsOf(dir), EntryTreeView.pathOf(dir)));
@@ -188,7 +189,7 @@ public class GuiSkinsManager extends GuiScreen {
         String q = this.searchBox == null ? "" : this.searchBox.getText().trim();
         String scope = searchScopeId();
         this.results.setScope(EntryTreeView.displayPath(scope));
-        this.results.setPreviewMode(this.tab);
+        this.results.setPreviewMode(this.parent.flagMode() ? TextureEntryList.FLAG_PREVIEW : this.tab);
         this.results.setHighlight(this.parent.currentTextureFor(this.tab));
         this.results.setResults(q.isEmpty()
             ? java.util.Collections.<SearchResultView.Row>emptyList()
@@ -215,6 +216,10 @@ public class GuiSkinsManager extends GuiScreen {
     }
 
     private void locate(ResourceLocation location, String dirId) {
+        if (this.parent.flagMode()) {
+            if (SkinSearch.tabForPath(dirId) != 1) return;
+            this.parent.applyTexture(1, location);
+        }
         int nextTab = SkinSearch.tabForPath(dirId);
         if (nextTab >= 0 && nextTab != this.tab) {
             this.tab = nextTab;
@@ -537,6 +542,7 @@ public class GuiSkinsManager extends GuiScreen {
     }
 
     private void switchTab(int nextTab) {
+        if (this.parent.flagMode() && nextTab != 1) return;
         if (nextTab == this.tab) {
             return;
         }
@@ -878,6 +884,7 @@ public class GuiSkinsManager extends GuiScreen {
     }
 
     private void drawTabsBack() {
+        if (this.parent.flagMode()) return;
         int[][] rects = tabRects();
         for (int i = 0; i < rects.length; i++) {
             if (i == this.tab) {
@@ -894,6 +901,7 @@ public class GuiSkinsManager extends GuiScreen {
     }
 
     private void drawTabsFront() {
+        if (this.parent.flagMode()) return;
         int[][] rects = tabRects();
         int i = this.tab;
         int tx = rects[i][0];
@@ -930,6 +938,7 @@ public class GuiSkinsManager extends GuiScreen {
     }
 
     private int tabAt(double mouseX, double mouseY) {
+        if (this.parent.flagMode()) return -1;
         int[][] rects = tabRects();
         for (int i = 0; i < rects.length; i++) {
             if (mouseX >= rects[i][0] && mouseX < rects[i][0] + rects[i][2]

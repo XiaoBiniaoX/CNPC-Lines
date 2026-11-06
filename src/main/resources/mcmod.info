@@ -11,6 +11,7 @@
   "credits": "",
   "logoFile": "icons.png",
   "screenshots": [],
-  "dependencies": []
+  "dependencies": ["customnpcs", "cnpcplus@[4.0.6,)"],
+  "requiredMods": ["customnpcs", "cnpcplus@[4.0.6,)"]
 }
 ]

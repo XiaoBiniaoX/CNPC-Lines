@@ -4,10 +4,14 @@
   "package": "top.cnpclines.mixin",
   "refmap": "refmap.cnpclines.json",
   "compatibilityLevel": "JAVA_8",
-  "mixins": [],
+  "mixins": [
+    "FactionVisualMixin"
+  ],
   "client": [
     "client.GuiNpcDisplayMixin",
-    "client.PacketHandlerClientMixin"
+    "client.PacketHandlerClientMixin",
+    "client.GuiManageFactionsMixin",
+    "client.FactionTextAreaAccess"
   ],
   "server": []
 }

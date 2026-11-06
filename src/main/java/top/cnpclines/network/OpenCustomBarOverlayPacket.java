@@ -1,12 +1,10 @@
 package top.cnpclines.network;
 
 import io.netty.buffer.ByteBuf;
-import net.minecraft.client.Minecraft;
 import net.minecraftforge.fml.common.network.ByteBufUtils;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
-import top.cnpclines.client.ClientMessageOverlay;
 
 public class OpenCustomBarOverlayPacket implements IMessage {
     private String message;
@@ -77,7 +75,7 @@ public class OpenCustomBarOverlayPacket implements IMessage {
     public static class Handler implements IMessageHandler<OpenCustomBarOverlayPacket, IMessage> {
         @Override
         public IMessage onMessage(final OpenCustomBarOverlayPacket message, MessageContext ctx) {
-            Minecraft.getMinecraft().addScheduledTask(() -> ClientMessageOverlay.show(message));
+            NetworkHandler.overlay.accept(message);
             return null;
         }
     }

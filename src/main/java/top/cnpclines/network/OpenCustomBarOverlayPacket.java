@@ -4,10 +4,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
-import top.cnpclines.client.ClientMessageOverlay;
 
 public class OpenCustomBarOverlayPacket implements CustomPacketPayload {
     public static final Type<OpenCustomBarOverlayPacket> TYPE = new Type<>(
@@ -81,10 +78,6 @@ public class OpenCustomBarOverlayPacket implements CustomPacketPayload {
     }
 
     public static void handle(OpenCustomBarOverlayPacket packet, IPayloadContext ctx) {
-        ctx.enqueueWork(() -> {
-            if (FMLEnvironment.dist == Dist.CLIENT) {
-                ClientMessageOverlay.show(packet);
-            }
-        });
+        ctx.enqueueWork(() -> NetworkHandler.overlay.accept(packet));
     }
 }

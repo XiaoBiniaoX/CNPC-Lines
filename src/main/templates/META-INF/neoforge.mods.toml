@@ -101,3 +101,11 @@ config="mixins.${mod_id}.json"
 # stop your mod loading on the server for example.
 #[features.${mod_id}]
 #openGLVersion="[3.2,)"
+
+# Styled text editor prerequisite, on both physical sides.
+[[dependencies.${mod_id}]]
+    modId="cnpcplus"
+    type="required"
+    versionRange="[4.0.6,)"
+    ordering="AFTER"
+    side="BOTH"

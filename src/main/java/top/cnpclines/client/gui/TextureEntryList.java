@@ -24,6 +24,7 @@ public class TextureEntryList {
     }
 
     static final int ROW_H = 26;
+    static final int FLAG_PREVIEW = 3;
 
     private static final int COL_FRAME = 0xFF808080;
     private static final int COL_BG = 0xFFEDEDED;
@@ -190,6 +191,9 @@ public class TextureEntryList {
                     contentX + 1 + offset, rowY + 1, 24, false);
                 this.skinThumb.drawSkinThumb(graphics, location,
                     contentX + 27 + offset, rowY + 1, 24, true);
+            } else if (this.previewMode == FLAG_PREVIEW) {
+                top.cnpclines.faction.client.FactionScreen.drawFlag(graphics, location.toString(),
+                    contentX + 7 + offset, rowY + 2, 14, 22);
             } else if (slots == CAPE_SLICES.length) {
                 for (int s = 0; s < CAPE_SLICES.length; s++) {
                     drawSlice(graphics, this.font, contentX + 1 + s * 26 + offset, rowY + 1,

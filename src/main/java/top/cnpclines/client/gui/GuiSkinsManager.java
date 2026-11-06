@@ -83,6 +83,7 @@ public class GuiSkinsManager extends Screen {
     public GuiSkinsManager(GuiBetterMaterialEditor parent) {
         super(Component.translatable("cnpclines.manager.title"));
         this.parent = parent;
+        if (parent.flagMode()) this.tab = 1;
     }
 
     @Override
@@ -169,7 +170,7 @@ public class GuiSkinsManager extends Screen {
     }
 
     private void refreshList() {
-        this.list.setPreviewMode(this.tab);
+        this.list.setPreviewMode(this.parent.flagMode() ? TextureEntryList.FLAG_PREVIEW : this.tab);
         this.list.setSwipeEnabled(true);
         String dir = this.tree.displayDir();
         this.list.setItems(ResourceIndex.filesIn(EntryTreeView.nsOf(dir), EntryTreeView.pathOf(dir)));
@@ -189,7 +190,7 @@ public class GuiSkinsManager extends Screen {
             return;
         }
         String query = searchQuery();
-        this.results.setPreviewMode(this.tab);
+        this.results.setPreviewMode(this.parent.flagMode() ? TextureEntryList.FLAG_PREVIEW : this.tab);
         this.results.setHighlight(this.parent.currentTextureFor(this.tab));
         this.results.setScope(EntryTreeView.displayPath(
             CustomSkinsPack.NAMESPACE + ":" + ROOT_PATHS[this.tab]));
@@ -339,6 +340,7 @@ public class GuiSkinsManager extends Screen {
     }
 
     private void switchTab(int nextTab) {
+        if (this.parent.flagMode() && nextTab != 1) return;
         if (nextTab == this.tab) {
             return;
         }
@@ -664,6 +666,7 @@ public class GuiSkinsManager extends Screen {
     }
 
     private void drawTabsBack(GuiGraphics graphics) {
+        if (this.parent.flagMode()) return;
         int[][] rects = tabRects();
         for (int i = 0; i < rects.length; i++) {
             if (i == this.tab) {
@@ -682,6 +685,7 @@ public class GuiSkinsManager extends Screen {
     }
 
     private void drawTabsFront(GuiGraphics graphics) {
+        if (this.parent.flagMode()) return;
         int[][] rects = tabRects();
         int i = this.tab;
         int tx = rects[i][0];
@@ -714,6 +718,7 @@ public class GuiSkinsManager extends Screen {
     }
 
     private int tabAt(double mouseX, double mouseY) {
+        if (this.parent.flagMode()) return -1;
         int[][] rects = tabRects();
         for (int i = 0; i < rects.length; i++) {
             if (mouseX >= rects[i][0] && mouseX < rects[i][0] + rects[i][2]

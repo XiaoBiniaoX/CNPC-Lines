@@ -3,9 +3,8 @@ package top.cnpclines.network;
 import java.util.function.Supplier;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.loading.FMLEnvironment;
+import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent.Context;
-import top.cnpclines.client.ClientMessageOverlay;
 
 public class OpenCustomBarOverlayPacket {
     private final String message;
@@ -68,9 +67,8 @@ public class OpenCustomBarOverlayPacket {
 
     public static void handle(OpenCustomBarOverlayPacket packet, Supplier<Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            if (FMLEnvironment.dist == Dist.CLIENT) {
-                ClientMessageOverlay.show(packet);
-            }
+            DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
+                () -> () -> top.cnpclines.client.ClientMessageOverlay.show(packet));
         });
         ctx.get().setPacketHandled(true);
     }

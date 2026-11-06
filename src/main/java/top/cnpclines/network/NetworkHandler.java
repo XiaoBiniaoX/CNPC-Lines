@@ -9,7 +9,7 @@ import net.minecraftforge.network.simple.SimpleChannel;
 
 public final class NetworkHandler {
     public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
-        new ResourceLocation("cnpclines", "main"), () -> "1.1", "1.1"::equals, "1.1"::equals
+        new ResourceLocation("cnpclines", "main"), () -> "1.2", "1.2"::equals, "1.2"::equals
     );
 
     private NetworkHandler() {
@@ -21,6 +21,7 @@ public final class NetworkHandler {
             .decoder(OpenCustomBarOverlayPacket::decode)
             .consumerMainThread(OpenCustomBarOverlayPacket::handle)
             .add();
+        top.cnpclines.faction.FactionPackets.register();
     }
 
     public static void sendToPlayer(ServerPlayer player, OpenCustomBarOverlayPacket packet) {

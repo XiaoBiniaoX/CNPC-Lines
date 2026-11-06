@@ -54,7 +54,9 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
         new ResourceLocation("cnpclines", "textures/overlay/message/icons/management.png"),
     };
 
-    private final GuiNpcDisplay parent;
+    private final Screen parent;
+    private final java.util.function.Consumer<ResourceLocation> flagCommit;
+    private String flagTexture;
     private final EntityNPCInterface npc;
     private final DataDisplay display;
 
@@ -84,6 +86,7 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
     public GuiBetterMaterialEditor(GuiNpcDisplay parent) {
         super(Component.translatable("cnpclines.editor.title"));
         this.parent = parent;
+        this.flagCommit = null;
         this.npc = parent.npc;
         this.display = npc.display;
         this.snapshotSkinType = display.skinType;
@@ -93,6 +96,25 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
         this.snapshotCape = display.getCapeTexture();
         this.snapshotOverlay = display.getOverlayTexture();
     }
+
+    /** Uses the same directory tree, search and Skins manager for faction cloaks. */
+    public GuiBetterMaterialEditor(Screen parent, EntityNPCInterface npc, String flag,
+            java.util.function.Consumer<ResourceLocation> commit) {
+        super(Component.translatable("cnpclines.faction.flag"));
+        this.parent = parent;
+        this.flagCommit = commit;
+        this.flagTexture = flag;
+        this.npc = npc;
+        this.display = npc.display;
+        this.snapshotSkinType = display.skinType;
+        this.snapshotSkin = display.getSkinTexture();
+        this.snapshotSkinUrl = display.getSkinUrl();
+        this.snapshotCape = display.getCapeTexture();
+        this.snapshotOverlay = display.getOverlayTexture();
+        this.tab = 1;
+    }
+
+    boolean flagMode() { return this.flagCommit != null; }
 
     @Override
     protected void init() {
@@ -162,10 +184,12 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
         this.addRenderableWidget(Button.builder(Component.translatable("cnpclines.common.cancel"), button -> cancelAndReturn())
             .bounds(this.guiLeft + 350, this.guiTop + 206, 64, 20).build());
 
-        this.slider = new GuiSliderNop(this, 0, this.guiLeft + 318, this.guiTop + 124, 94, 20,
-            this.rotation / 360f);
-        this.slider.setString(I18n.get("cnpclines.editor.rotate", this.rotation));
-        this.addRenderableWidget(this.slider);
+        if (!flagMode()) {
+            this.slider = new GuiSliderNop(this, 0, this.guiLeft + 318, this.guiTop + 124, 94, 20,
+                this.rotation / 360f);
+            this.slider.setString(I18n.get("cnpclines.editor.rotate", this.rotation));
+            this.addRenderableWidget(this.slider);
+        }
     }
 
     @Override
@@ -361,6 +385,14 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
             return;
         }
         String value = location.toString();
+        if (flagMode()) {
+            if (tab != 1) return;
+            if (!ResourceIndex.toOriginal(location.getNamespace(), location.getPath()).startsWith("textures/cloak/")) return;
+            this.flagTexture = value;
+            if (this.list != null) this.list.setHighlight(location);
+            syncBox();
+            return;
+        }
         if (tab == 0) {
             this.display.setSkinTexture(value);
         } else if (tab == 1) {
@@ -382,6 +414,7 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
     }
 
     private void switchTab(int nextTab) {
+        if (flagMode() && nextTab != 1) return;
         if (nextTab == this.tab) return;
         this.tab = nextTab;
         if (this.searchBox != null) {
@@ -428,7 +461,7 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
     }
 
     private void refreshList() {
-        this.list.setPreviewMode(this.tab);
+        this.list.setPreviewMode(flagMode() ? TextureEntryList.FLAG_PREVIEW : this.tab);
         this.list.setSwipeEnabled(false);
         String dir = this.tree.displayDir();
         this.list.setItems(ResourceIndex.filesIn(EntryTreeView.nsOf(dir), EntryTreeView.pathOf(dir)));
@@ -449,7 +482,7 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
             return;
         }
         String query = searchQuery();
-        this.results.setPreviewMode(this.tab);
+        this.results.setPreviewMode(flagMode() ? TextureEntryList.FLAG_PREVIEW : this.tab);
         this.results.setHighlight(currentTexture());
         this.results.setScope(EntryTreeView.displayPath(
             CustomSkinsPack.NAMESPACE + ":" + ROOT_PATHS[this.tab]));
@@ -484,6 +517,7 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
     }
 
     private String currentString() {
+        if (flagMode()) return this.flagTexture;
         if (this.tab == 0) {
             String url = this.display.getSkinUrl();
             if (this.display.skinType == 2 && url != null && !url.isEmpty()) {
@@ -501,7 +535,10 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
 
     ResourceLocation currentTextureFor(int tab) {
         String value;
-        if (tab == 0) {
+        if (flagMode()) {
+            if (tab != 1) return null;
+            value = this.flagTexture;
+        } else if (tab == 0) {
             value = this.display.getSkinTexture();
         } else if (tab == 1) {
             value = this.display.getCapeTexture();
@@ -528,23 +565,32 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
     }
 
     private void saveAndReturn() {
+        if (flagMode()) {
+            ResourceLocation flag = currentTexture();
+            if (flag == null) return;
+            this.closed = true;
+            this.flagCommit.accept(flag);
+            this.minecraft.setScreen(this.parent);
+            return;
+        }
         this.closed = true;
         this.npc.textureLocation = null;
         this.npc.textureCloakLocation = null;
         this.npc.textureGlowLocation = null;
-        this.parent.save();
+        ((GuiNpcDisplay)this.parent).save();
         this.minecraft.setScreen(this.parent);
-        this.parent.initGui();
+        ((GuiNpcDisplay)this.parent).initGui();
     }
 
     private void cancelAndReturn() {
         this.closed = true;
         restoreSnapshot();
         this.minecraft.setScreen(this.parent);
-        this.parent.initGui();
+        if (this.parent instanceof GuiNpcDisplay displayParent) displayParent.initGui();
     }
 
     private void restoreSnapshot() {
+        if (flagMode()) return;
         this.display.setSkinTexture(this.snapshotSkin);
         try {
             this.display.setSkinUrl(this.snapshotSkinUrl);
@@ -567,7 +613,7 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
         graphics.fill(x, y + PANEL_H - 1, x + PANEL_W, y + PANEL_H, COL_DARK);
         graphics.fill(x + PANEL_W - 1, y, x + PANEL_W, y + PANEL_H, COL_DARK);
 
-        String title = I18n.get("cnpclines.editor.title");
+        String title = I18n.get(flagMode() ? "cnpclines.faction.flag_picker" : "cnpclines.editor.title");
         graphics.drawString(this.font, title, x + 8, y + 7, COL_TEXT, false);
         String hint = null;
         if (this.tab == 0 && this.display.skinType != 0) {
@@ -597,6 +643,7 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
     }
 
     private void drawTabsBack(GuiGraphics graphics) {
+        if (flagMode()) return;
         int[][] rects = tabRects();
         for (int i = 0; i < rects.length; i++) {
             if (i == this.tab) {
@@ -615,6 +662,7 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
     }
 
     private void drawTabsFront(GuiGraphics graphics) {
+        if (flagMode()) return;
         int[][] rects = tabRects();
         int i = this.tab;
         int tx = rects[i][0];
@@ -647,6 +695,7 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
     }
 
     private int tabAt(double mouseX, double mouseY) {
+        if (flagMode()) return -1;
         int[][] rects = tabRects();
         for (int i = 0; i < rects.length; i++) {
             if (mouseX >= rects[i][0] && mouseX < rects[i][0] + rects[i][2]
@@ -658,6 +707,18 @@ public class GuiBetterMaterialEditor extends Screen implements ISliderListener {
     }
 
     private void drawPreview(GuiGraphics graphics, int mouseX, int mouseY) {
+        if (flagMode()) {
+            graphics.pose().pushPose();
+            graphics.pose().translate(this.guiLeft + 365, this.guiTop + 20, 0);
+            graphics.pose().scale(1.5f, 1.5f, 1);
+            graphics.drawCenteredString(this.font, I18n.get("cnpclines.faction.flag"), 0, 0, COL_TEXT);
+            graphics.pose().popPose();
+            graphics.enableScissor(this.guiLeft + 318, this.guiTop + 38, this.guiLeft + 412, this.guiTop + 176);
+            top.cnpclines.faction.client.FactionScreen.drawFlag(graphics, this.flagTexture,
+                this.guiLeft + 331, this.guiTop + 42, 68, 130);
+            graphics.disableScissor();
+            return;
+        }
         graphics.drawCenteredString(this.font, I18n.get("cnpclines.editor.npc_preview"), this.guiLeft + 365,
             this.guiTop + 22, COL_TEXT);
         drawNpc(graphics, this.guiLeft + 365, this.guiTop + 116, 1.3f, this.rotation,

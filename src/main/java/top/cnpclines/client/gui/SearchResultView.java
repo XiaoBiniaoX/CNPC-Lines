@@ -167,6 +167,9 @@ public class SearchResultView {
                     contentX + 3, thumbY, 24, false);
                 this.skinThumb.drawSkinThumb(graphics, location,
                     contentX + 29, thumbY, 24, true);
+            } else if (this.previewMode == TextureEntryList.FLAG_PREVIEW) {
+                top.cnpclines.faction.client.FactionScreen.drawFlag(graphics, location.toString(),
+                    contentX + 9, thumbY, 14, 22);
             } else if (slots == TextureEntryList.CAPE_SLICES.length) {
                 for (int s = 0; s < TextureEntryList.CAPE_SLICES.length; s++) {
                     TextureEntryList.drawSlice(graphics, this.font,

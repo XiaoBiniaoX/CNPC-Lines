@@ -86,7 +86,7 @@ public final class TexturePreviewLoader {
                 for (int y = 0; y < height; y++) {
                     for (int x = 0; x < width; x++) {
                         int argb = pending.pixels()[y * width + x];
-                        int abgr = (argb << 24) | ((argb & 0xFF) << 16) | (argb & 0x0000FF00) | ((argb >>> 16) & 0xFF);
+                        int abgr = (argb & 0xFF000000) | ((argb & 0xFF) << 16) | (argb & 0x0000FF00) | ((argb >>> 16) & 0xFF);
                         frontImage.setPixelRGBA(x, y, abgr);
                         backImage.setPixelRGBA(width - 1 - x, y, abgr);
                     }
